@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { render } from 'ink'
+import { withFullScreen } from 'fullscreen-ink'
 import meow from 'meow'
 import React from 'react'
 import App from './app.js'
@@ -9,7 +9,7 @@ meow(
 Usage
     $ shopx
 
-A Claude-like terminal interface for conversations.
+claude code for shopping
 
 Examples
     $ shopx
@@ -20,4 +20,5 @@ Examples
   }
 )
 
-render(<App />)
+process.stdout.write('\x1b[2J\x1b[0f')
+withFullScreen(<App />).start()

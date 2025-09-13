@@ -35,17 +35,27 @@ export default function InputArea({ onSubmit, isProcessing }: Props) {
         alignItems="center"
         minWidth={50}
       >
-        <Text color="blue">{'>'}</Text>
-        <TextInput
-          value={value}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-          placeholder={isProcessing ? 'Processing...' : 'Type your message...'}
-        />
+        <Box flexGrow={1} flexDirection="row" gap={1} alignItems="center">
+          <Text color="blue">{'> '}</Text>
+          <TextInput
+            value={value}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            placeholder={
+              isProcessing ? 'Processing...' : 'Type your message...'
+            }
+          />
+        </Box>
       </Box>
-      <Text color="gray">
-        Press Enter to send • {isProcessing ? 'Processing...' : 'Ready'}
-      </Text>
+      <Box
+        flexDirection="row"
+        alignItems="center"
+        justifyContent="space-between"
+      >
+        <Text color="gray">Press Enter to send</Text>
+        <Text color="gray">{isProcessing ? 'Processing...' : 'Ready'}</Text>
+        <Text color="gray">Press Ctrl+C to exit</Text>
+      </Box>
     </Box>
   )
 }

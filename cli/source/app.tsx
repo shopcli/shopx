@@ -1,7 +1,11 @@
 import { Box } from 'ink'
 import React, { useState } from 'react'
-import { Header, InputArea, MessageList } from './components/index.js'
-import LoadingSpinner from './components/Spinner.js'
+import {
+  FlavourText,
+  Header,
+  InputArea,
+  MessageList,
+} from './components/index.js'
 import { Message } from './config/types.js'
 
 export default function App() {
@@ -25,11 +29,7 @@ export default function App() {
         content: `I received your message: "${content}". This is a simulated response.`,
         isUser: false,
         timestamp: new Date(),
-        subcontent: [
-          'This is a simulated response.',
-          'This is a simulated response.',
-          'This is a simulated response.',
-        ],
+        subcontent: ['This is a simulated response.'],
       }
       setMessages(prev => [...prev, aiMessage])
       setIsProcessing(false)
@@ -37,20 +37,18 @@ export default function App() {
   }
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Box flexDirection="column" padding={1}>
+    <Box flexDirection="column" padding={1} flexGrow={1} height={'100%'}>
+      <Box flexDirection="column">
         <Header />
       </Box>
 
-      <Box flexDirection="column" flexGrow={1} paddingX={1}>
+      <Box flexDirection="column" flexGrow={1} paddingY={1}>
         <MessageList messages={messages} />
       </Box>
 
-      <Box paddingX={1}>
-        {isProcessing && <LoadingSpinner message="Processing..." />}
-      </Box>
+      <Box>{isProcessing && <FlavourText />}</Box>
 
-      <Box flexDirection="column" padding={1}>
+      <Box flexDirection="column">
         <InputArea onSubmit={handleMessageSubmit} isProcessing={isProcessing} />
       </Box>
     </Box>

@@ -10,8 +10,8 @@ interface Props {
 function UserMessage({ message }: { message: Message }) {
   return (
     <Box flexDirection="column" marginBottom={1}>
-      <Box flexDirection="row">
-        <Text color={mutedColor}>{'> '}</Text>
+      <Box flexDirection="row" gap={1}>
+        <Text color={mutedColor}>{'>'}</Text>
         <Text color={mutedColor}>{message.content}</Text>
       </Box>
     </Box>
@@ -22,13 +22,13 @@ function AIMessage({ message }: { message: Message }) {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box flexDirection="column">
-        <Box flexDirection="row">
-          <Text color="green">◆ </Text>
+        <Box flexDirection="row" gap={1}>
+          <Text color="green">◆</Text>
           <Text>{message.content}</Text>
         </Box>
         {message.subcontent?.map(subcontent => (
-          <Box key={subcontent} flexDirection="row" marginLeft={2}>
-            <Text color="green"> ↳ </Text>
+          <Box key={subcontent} flexDirection="row" marginLeft={2} gap={1}>
+            <Text color="green"> ↳</Text>
             <Text>{subcontent}</Text>
           </Box>
         ))}
@@ -39,7 +39,7 @@ function AIMessage({ message }: { message: Message }) {
 
 export default function MessageList({ messages }: Props) {
   return (
-    <Box flexDirection="column" paddingY={1}>
+    <Box flexDirection="column" paddingY={1} flexGrow={1}>
       {messages.map(message =>
         message.isUser ? (
           <UserMessage key={message.id} message={message} />
