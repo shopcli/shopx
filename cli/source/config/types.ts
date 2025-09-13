@@ -5,3 +5,8 @@ export interface Message {
   timestamp: Date
   subcontent?: string[]
 }
+
+export interface CallbackMessage {
+	sendMessage(message: Message, phase: string): Promise<void>;
+	sendImage(imageBase64: string): void;
+}

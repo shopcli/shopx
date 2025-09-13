@@ -6,11 +6,38 @@ import {
   InputArea,
   MessageList,
 } from './components/index.js'
-import { Message } from './config/types.js'
+import { CallbackMessage, Message } from './config/types.js'
+
+class AppClass implements CallbackMessage {
+	constructor(
+		public notify: (arg0: Message, arg1: string) => void,
+		public notifyImage: (arg0: string) => void,
+	) {
+		this.notify = notify;
+		this.notifyImage = notifyImage;
+	}
+	async sendMessage(message: Message, phase: string): Promise<void> {
+		this.notify(message, phase);
+	}
+
+	sendImage(imageBase64: string) {
+		this.notifyImage(imageBase64);
+	}
+}
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+
+	const handleMessageResponse = async (message: Message, phase: string) => {
+
+	}
+
+	const handleImageResponse = (imageBase64: string) => {
+
+	}
+
+	const app = new AppClass(handleMessageResponse, handleImageResponse)
 
   const handleMessageSubmit = async (content: string) => {
     const userMessage: Message = {
@@ -23,17 +50,7 @@ export default function App() {
     setMessages(prev => [...prev, userMessage])
     setIsProcessing(true)
 
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `I received your message: "${content}". This is a simulated response.`,
-        isUser: false,
-        timestamp: new Date(),
-        subcontent: ['This is a simulated response.'],
-      }
-      setMessages(prev => [...prev, aiMessage])
-      setIsProcessing(false)
-    }, 1000)
+    callShopapp(userMessage, app)
   }
 
   return (
