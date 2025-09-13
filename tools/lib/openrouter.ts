@@ -3,7 +3,7 @@ import { MealDecision, MenuItem, SelectedItems } from './types';
 
 export class OpenRouterClient {
   private apiKey: string;
-  private baseURL: string = 'https://api.openai.com/v1';
+  private baseURL: string = 'https://openrouter.ai/api/v1';
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -29,7 +29,7 @@ export class OpenRouterClient {
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'gpt-5-mini',
+          model: 'openai/gpt-oss-120b:nitro',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
@@ -75,7 +75,7 @@ export class OpenRouterClient {
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'gpt-5-mini',
+          model: 'openai/gpt-oss-120b:nitro',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -118,7 +118,7 @@ export class OpenRouterClient {
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'gpt-5-mini',
+          model: 'openai/gpt-oss-120b:nitro',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }

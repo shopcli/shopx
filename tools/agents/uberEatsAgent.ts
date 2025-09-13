@@ -24,7 +24,7 @@ export class UberEatsAgent {
     this.config = {
       headless: config.headless !== false,
       address: config.address || 'Engineering 7, 200 University Ave W, Waterloo, ON N2L 3G5',
-      openRouterApiKey: config.openRouterApiKey || process.env.OPENAI_API_KEY || '',
+      openRouterApiKey: config.openRouterApiKey || process.env.OPENROUTER_API_KEY || '',
       timeout: config.timeout || 30000,
       useSavedCookies: config.useSavedCookies !== false,
       cookiesPath: config.cookiesPath || ''
