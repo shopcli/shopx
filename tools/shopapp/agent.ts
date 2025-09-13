@@ -125,6 +125,7 @@ class ShopAppAgent {
     }
   }
 
+
   async navigateToShopApp(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
     
@@ -215,7 +216,7 @@ class ShopAppAgent {
 Products:
 ${productList}
 
-Return only the product titles, one per line, in order of preference. Do not change the original text of the product titles.`;
+Consider the price when making your selection. Return only the product titles, one per line, in order of preference. Do not change the original text of the product titles.`;
 
     try {
       const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -326,7 +327,7 @@ Return only the product titles, one per line, in order of preference. Do not cha
       }
 
       console.log('Selecting best products...');
-      console.log(products.map(p => p.title));
+      console.log(products.map(p => `${p.title} - ${p.price}`));
       const selectedProducts = await this.selectBestProducts(products, userPrompt);
       console.log(`Selected ${selectedProducts.length} products`);
 
