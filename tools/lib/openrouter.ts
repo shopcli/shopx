@@ -12,7 +12,9 @@ export class OpenRouterClient {
   async decideMeal(prompt: string, context: Record<string, any> = {}): Promise<MealDecision> {
     try {
       const systemPrompt = `You are a helpful meal ordering assistant. Given a user's request, decide what to order from Uber Eats.
-
+      
+      Return Uber Eats categories. Pizza is a cuisine type.
+      
       Context:
       - Location: Engineering 7, 200 University Ave W, Waterloo, ON N2L 3G5
       - Time: ${new Date().toLocaleTimeString()}
@@ -31,7 +33,7 @@ export class OpenRouterClient {
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'openai/gpt-3.5-turbo',
+          model: 'openai/gpt-oss-120b',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: prompt }
@@ -65,7 +67,7 @@ export class OpenRouterClient {
 
       const userPrompt = `Menu items: ${JSON.stringify(items)}
       Preferences: ${JSON.stringify(preferences)}
-
+      This is for Uber Eats.
       Select items that best match the preferences. Return a JSON object with:
       - selected_items: Array of item names to order
       - total_estimated_cost: Estimated total cost as a number
@@ -74,7 +76,7 @@ export class OpenRouterClient {
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
-          model: 'openai/gpt-3.5-turbo',
+          model: 'openai/gpt-oss-120b',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }

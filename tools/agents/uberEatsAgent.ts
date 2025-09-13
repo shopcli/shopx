@@ -28,7 +28,7 @@ export class UberEatsAgent {
 
   async initialize(): Promise<void> {
     this.browser = await puppeteer.launch({
-      headless: this.config.headless,
+      headless: false,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: { width: 1280, height: 800 }
     });
