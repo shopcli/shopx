@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "npm run build && node dist/index.js",
+    "demo": "ts-node demo.ts",
     "dev": "ts-node index.ts",
     "test": "jest",
     "lint": "eslint . --ext .ts",

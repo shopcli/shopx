@@ -18,13 +18,15 @@ export class OpenRouterClient {
       - Time: ${new Date().toLocaleTimeString()}
       - Day: ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}
 
-      Provide a structured response with:
+      You must provide a structured JSON response with the following fields:
       1. cuisine_type: The type of cuisine (e.g., Italian, Chinese, Indian, etc.)
       2. restaurant_preferences: Any specific restaurant preferences
       3. items: An array of items to order with quantities
       4. dietary_restrictions: Any dietary restrictions to consider
       5. price_range: Budget preference (budget/moderate/expensive)
-      6. special_instructions: Any special instructions for the order`;
+      6. special_instructions: Any special instructions for the order
+
+      Always respond in valid JSON format.`;
 
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
@@ -59,7 +61,7 @@ export class OpenRouterClient {
 
   async analyzeMenuItems(items: MenuItem[], preferences: MealDecision): Promise<SelectedItems> {
     try {
-      const systemPrompt = `You are a menu selection assistant. Given a list of menu items and user preferences, select the best items to order.`;
+      const systemPrompt = `You are a menu selection assistant. Given a list of menu items and user preferences, select the best items to order. Always respond with valid JSON.`;
 
       const userPrompt = `Menu items: ${JSON.stringify(items)}
       Preferences: ${JSON.stringify(preferences)}
