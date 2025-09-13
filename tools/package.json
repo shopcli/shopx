@@ -1,0 +1,44 @@
+{
+  "name": "shopx-food-ordering-agent",
+  "version": "1.0.0",
+  "description": "AI-powered Uber Eats ordering agent",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/index.js",
+    "demo": "ts-node demo.ts",
+    "dev": "ts-node index.ts",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "save-cookies": "npm run build && node dist/save-cookies.js",
+    "test-auth": "npm run build && node dist/test-auth.js",
+    "debug-auth": "npm run build && node dist/debug-auth.js",
+    "import-cookies": "npm run build && node dist/import-cookies.js"
+  },
+  "keywords": [
+    "uber-eats",
+    "food-ordering",
+    "ai-agent",
+    "puppeteer",
+    "openrouter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.11.24",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
