@@ -4,26 +4,20 @@ import meow from 'meow'
 import React from 'react'
 import App from './app.js'
 
-const cli = meow(
+meow(
   `
 Usage
     $ shopx
 
-Options
-    --name  Your name
+A Claude-like terminal interface for conversations.
 
 Examples
-    $ shopx --name=Jane
-    Hello, Jane
+    $ shopx
+    Start chatting with the AI assistant
 `,
   {
     importMeta: import.meta,
-    flags: {
-      name: {
-        type: 'string',
-      },
-    },
   }
 )
 
-render(<App name={cli.flags.name} />)
+render(<App />)
