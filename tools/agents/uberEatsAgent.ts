@@ -389,7 +389,8 @@ export class UberEatsAgent {
 
     console.log('Extracting menu items...');
 
-    await this.autoScroll();
+    // Wait a moment for page to be ready, but don't scroll
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Try multiple selector strategies for menu items
     const selectorStrategies = [
