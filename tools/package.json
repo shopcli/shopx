@@ -10,7 +10,9 @@
     "dev": "ts-node index.ts",
     "test": "jest",
     "lint": "eslint . --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "save-cookies": "npm run build && node dist/save-cookies.js",
+    "test-auth": "npm run build && node dist/test-auth.js"
   },
   "keywords": [
     "uber-eats",

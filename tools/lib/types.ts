@@ -42,4 +42,12 @@ export interface AgentConfig {
   address?: string;
   openRouterApiKey?: string;
   timeout?: number;
+  useSavedCookies?: boolean;
+  cookiesPath?: string;
+}
+
+export interface UberEatsCookies {
+  cookies: any[];
+  domain: string;
+  lastUpdated: string;
 }

@@ -11,13 +11,13 @@ export class FoodOrderingAgent {
     this.agent = new UberEatsAgent(config);
   }
 
-  async orderFromPrompt(prompt: string) {
+  async orderFromPrompt(prompt: string, keepBrowserOpen: boolean = true) {
     console.log('🍔 Food Ordering Agent Started');
     console.log(`📝 User Request: ${prompt}`);
     console.log('─'.repeat(50));
 
     try {
-      const result = await this.agent.orderMeal(prompt);
+      const result = await this.agent.orderMeal(prompt, keepBrowserOpen);
 
       console.log('─'.repeat(50));
       console.log('✅ Order Summary:');
@@ -49,10 +49,11 @@ if (require.main === module) {
   const prompt = args.join(' ');
   const agent = new FoodOrderingAgent();
 
-  agent.orderFromPrompt(prompt)
+  agent.orderFromPrompt(prompt, true) // Keep browser open by default
     .then(() => {
-      console.log('✨ Process completed');
-      process.exit(0);
+      console.log('✨ Process completed - Browser left open for manual checkout');
+      console.log('💡 Press Ctrl+C to exit when done');
+      // Don't exit automatically - let user complete checkout
     })
     .catch((error) => {
       console.error('Fatal error:', error);
