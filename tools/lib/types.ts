@@ -20,6 +20,8 @@ export interface Restaurant {
   url: string;
   name: string;
   rating: string;
+  deliveryTime?: string;
+  priceLevel?: number;
 }
 
 export interface SelectedItems {
