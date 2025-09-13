@@ -297,8 +297,40 @@ Consider the price when making your selection. Return only the product titles, o
       await this.page.waitForLoadState('load');
       await this.page.waitForTimeout(5000);
       console.log('Buy now button clicked!');
+      
+      // Take screenshot and encode as base64
+      await this.takeScreenshot();
     } else {
       throw new Error('Buy now button not found');
+    }
+  }
+
+  async takeScreenshot(): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized');
+
+    try {
+      console.log('Taking screenshot...');
+      const screenshot = await this.page.screenshot({ 
+        type: 'png',
+        fullPage: true 
+      });
+      
+      const base64Image = screenshot.toString('base64');
+      console.log('Screenshot captured (base64):');
+      console.log(`data:image/png;base64,${base64Image}`);
+      
+      // Also save to file for reference
+      const fs = require('fs');
+      const path = require('path');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `screenshot-${timestamp}.png`;
+      const filepath = path.join(__dirname, filename);
+      
+      fs.writeFileSync(filepath, screenshot);
+      console.log(`Screenshot also saved to: ${filename}`);
+      
+    } catch (error) {
+      console.error('Failed to take screenshot:', error);
     }
   }
 
