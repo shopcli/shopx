@@ -25,7 +25,20 @@ npm run build
 
 ## Usage
 
-### Command Line
+### Capture Cookies (First Time Setup)
+
+```bash
+npm run capture-cookies
+```
+
+This will:
+
+1. Open a browser window to shop.app
+2. Wait for you to manually login
+3. Press Enter in the terminal when logged in
+4. Automatically capture and save cookies to `cookies.json`
+
+### Run the Agent
 
 ```bash
 npm run dev "I want a plain white t shirt for a man"
@@ -48,9 +61,35 @@ await agent.run('I want a plain white t shirt for a man')
 - **Automated Navigation**: Handles clicking through to products and buy now buttons
 - **Robust Error Handling**: Graceful handling of missing elements and network issues
 
+## Cookie Management
+
+The agent supports loading cookies from `cookies.json` to avoid logging in every time:
+
+```json
+{
+  "cookies": [
+    {
+      "name": "_shopify_y",
+      "value": "your-value",
+      "domain": "shop.app",
+      "path": "/",
+      "secure": true,
+      "httpOnly": false,
+      "sameSite": "None"
+    }
+  ],
+  "domain": "shop.app",
+  "lastUpdated": "2025-09-13T21:52:30.949Z"
+}
+```
+
+- Place your `cookies.json` file in the same directory as `agent.ts`
+- The agent will automatically load cookies on startup
+- Cookies are automatically saved after successful interactions
+
 ## Environment Variables
 
-- `OPENROUTE_API_KEY`: Your OpenRoute API key for AI functionality
+- `OPENROUTER_API_KEY`: Your OpenRouter API key for AI functionality
 
 ## Dependencies
 

@@ -1,5 +1,7 @@
 import axios from 'axios';
 import * as dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Browser, chromium, Page } from 'playwright';
 
 dotenv.config();
@@ -11,7 +13,6 @@ interface Product {
   rating: number;
   reviewCount: number;
   href: string;
-  element: any;
 }
 
 interface OpenRouteResponse {
@@ -30,7 +31,7 @@ class ShopAppAgent {
   constructor() {
     this.openRouteApiKey = process.env.OPENROUTER_API_KEY || '';
     if (!this.openRouteApiKey) {
-      throw new Error('OPENROUTE_API_KEY environment variable is required');
+      throw new Error('OPENROUTER_API_KEY environment variable is required');
     }
   }
 
@@ -41,6 +42,63 @@ class ShopAppAgent {
     });
     this.page = await this.browser.newPage();
     await this.page.setViewportSize({ width: 1280, height: 720 });
+    
+    // Load cookies if they exist
+    await this.loadCookies();
+  }
+
+  async loadCookies(): Promise<void> {
+    if (!this.page) return;
+
+    const cookiesPath = path.join(__dirname, 'cookies.json');
+    
+    try {
+      if (fs.existsSync(cookiesPath)) {
+        const cookiesData = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
+        
+        if (cookiesData.cookies && Array.isArray(cookiesData.cookies)) {
+          // Add cookies before navigating
+          const cookiesToAdd = cookiesData.cookies.map((cookie: any) => ({
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path,
+            secure: cookie.secure,
+            httpOnly: cookie.httpOnly,
+            sameSite: cookie.sameSite as 'Strict' | 'Lax' | 'None'
+          }));
+
+          await this.page.context().addCookies(cookiesToAdd);
+          console.log(`Loaded ${cookiesData.cookies.length} cookies`);
+          
+          // Now navigate to the site with cookies loaded
+          await this.page.goto('https://shop.app');
+          await this.page.waitForLoadState('load');
+          
+          // Verify cookies are loaded
+          const currentCookies = await this.page.context().cookies();
+          console.log(`Current cookies after load: ${currentCookies.length}`);
+          
+          // Check if we're logged in by looking for user-specific elements
+          try {
+            const userElement = await this.page.waitForSelector('[data-testid*="user"], [data-testid*="account"], .user-menu, .account-menu', { timeout: 3000 });
+            if (userElement) {
+              console.log('Successfully authenticated - user elements found');
+            }
+          } catch (e) {
+            console.log('No user elements found - may not be logged in');
+          }
+        }
+      } else {
+        console.log('No cookies file found, proceeding without authentication');
+        await this.page.goto('https://shop.app');
+        await this.page.waitForLoadState('load');
+      }
+    } catch (error) {
+      console.warn('Failed to load cookies:', error);
+      await this.page.goto('https://shop.app');
+      await this.page.waitForLoadState('load');
+    }
   }
 
   async generateSearchQuery(userPrompt: string): Promise<string> {
@@ -70,8 +128,8 @@ class ShopAppAgent {
   async navigateToShopApp(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
     
-    await this.page.goto('https://shop.app');
-    await this.page.waitForLoadState('networkidle');
+    // Page should already be on shop.app from loadCookies
+    console.log('Already on shop.app, ready to search');
   }
 
   async performSearch(searchQuery: string): Promise<void> {
@@ -101,7 +159,8 @@ class ShopAppAgent {
     await searchInput.click();
     await searchInput.fill(searchQuery);
     await searchInput.press('Enter');
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState('load');
+    await this.page.waitForTimeout(5000);
   }
 
   async extractProducts(): Promise<Product[]> {
@@ -135,8 +194,7 @@ class ShopAppAgent {
             price: price?.trim() || '',
             rating,
             reviewCount: 0,
-            href: href.startsWith('http') ? href : `https://shop.app${href}`,
-            element: card
+            href: href.startsWith('http') ? href : `https://shop.app${href}`
           });
         }
       } catch (error) {
@@ -157,13 +215,13 @@ class ShopAppAgent {
 Products:
 ${productList}
 
-Return only the product titles, one per line, in order of preference.`;
+Return only the product titles, one per line, in order of preference. Do not change the original text of the product titles.`;
 
     try {
       const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'openai/gpt-3.5-turbo',
+        model: 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 200
+        max_tokens: 5000
       }, {
         headers: {
           'Authorization': `Bearer ${this.openRouteApiKey}`,
@@ -199,11 +257,34 @@ Return only the product titles, one per line, in order of preference.`;
   async clickProduct(product: Product): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
-    const linkElement = await product.element.$('a[data-testid="product-link-test-id"]');
-    if (linkElement) {
-      await linkElement.click();
-      await this.page.waitForLoadState('networkidle');
+    // Find the product by its title since the stored element reference is stale
+    const productCards = await this.page.$$('[data-testid="product-card"]');
+    
+    for (const card of productCards) {
+      try {
+        const titleElement = await card.$('[data-testid="product-title"]');
+        if (titleElement) {
+          const title = await titleElement.textContent();
+          console.log(`Title: ${title}`);
+          console.log(`Product title: ${product.title}`);
+          if (title && title.trim() === product.title) {
+            console.log(`Found product: ${title}`);
+            const linkElement = await card.$('a[data-testid="product-link-test-id"]');
+            if (linkElement) {
+              await linkElement.click();
+              await this.page.waitForLoadState('load');
+              await this.page.waitForTimeout(5000);
+              console.log(`Clicked on product: ${product.title}`);
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking product card:', error);
+      }
     }
+
+    throw new Error(`Could not find product: ${product.title}`);
   }
 
   async clickBuyNow(): Promise<void> {
@@ -212,6 +293,8 @@ Return only the product titles, one per line, in order of preference.`;
     const buyNowButton = await this.page.waitForSelector('[data-testid="buy-now-btn"]', { timeout: 10000 });
     if (buyNowButton) {
       await buyNowButton.click();
+      await this.page.waitForLoadState('load');
+      await this.page.waitForTimeout(5000);
       console.log('Buy now button clicked!');
     } else {
       throw new Error('Buy now button not found');
@@ -243,11 +326,13 @@ Return only the product titles, one per line, in order of preference.`;
       }
 
       console.log('Selecting best products...');
+      console.log(products.map(p => p.title));
       const selectedProducts = await this.selectBestProducts(products, userPrompt);
       console.log(`Selected ${selectedProducts.length} products`);
 
       if (selectedProducts.length > 0) {
         console.log('Clicking on first product...');
+        console.log(selectedProducts[0]);
         await this.clickProduct(selectedProducts[0]);
 
         console.log('Clicking buy now...');

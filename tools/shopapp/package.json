@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/agent.js",
-    "dev": "ts-node agent.ts"
+    "dev": "ts-node agent.ts",
+    "capture-cookies": "ts-node capture-cookies.ts"
   },
   "dependencies": {
     "playwright": "^1.40.0",
