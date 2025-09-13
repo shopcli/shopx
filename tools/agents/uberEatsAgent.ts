@@ -263,6 +263,13 @@ export class UberEatsAgent {
     console.log('Navigating to Uber Eats...');
     await this.page.goto('https://www.ubereats.com/', { waitUntil: 'networkidle2' });
 
+    // Wait for page to fully load before checking for modals
+    console.log('⏳ Waiting for page to stabilize before checking for modals...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Close promotional modals
+    await this.closePromotionalModals();
+
     try {
       const acceptCookies = await this.page.$('[data-testid="accept-cookies"]');
       if (acceptCookies) {
@@ -274,8 +281,136 @@ export class UberEatsAgent {
     }
   }
 
+  private async closePromotionalModals(): Promise<void> {
+    if (!this.page) return;
+
+    console.log('🔍 Checking for promotional modals...');
+
+    try {
+      // Wait a bit for any modals to appear (shorter wait since we call this multiple times)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const modalsClosed = await this.page.evaluate(() => {
+        let closedCount = 0;
+
+        // Strategy 1: Look for specific Uber One promotional modal patterns
+        const promotionalTexts = [
+          'Try Uber One',
+          'Uber One',
+          'Save on delivery fees',
+          'Free delivery',
+          'Join Uber One',
+          'Special offer',
+          'Limited time'
+        ];
+
+        // Strategy 2: Look for close buttons in modals
+        const closeButtonSelectors = [
+          '[data-testid*="close"]',
+          '[aria-label*="close"]',
+          '[aria-label*="Close"]',
+          'button[aria-label*="dismiss"]',
+          'button[title*="close"]',
+          'button[title*="Close"]',
+          '[data-testid*="modal-close"]',
+          '.close-button',
+          'button.close',
+          '[data-baseweb="icon"] button', // Uber's close button pattern
+          'svg[data-baseweb="icon"]' // Close icon
+        ];
+
+        // First, try to find and close promotional modals by their content
+        const allElements = Array.from(document.querySelectorAll('div, section, [role="dialog"]'));
+
+        for (const element of allElements) {
+          const text = element.textContent || '';
+          const isPromo = promotionalTexts.some(promo => text.includes(promo));
+
+          if (isPromo && text.length < 500) { // Avoid huge containers
+            console.log(`Found promotional modal with text: "${text.substring(0, 100)}"`);
+
+            // Look for close button within this modal
+            for (const selector of closeButtonSelectors) {
+              const closeBtn = element.querySelector(selector);
+              if (closeBtn && closeBtn instanceof HTMLElement) {
+                try {
+                  closeBtn.click();
+                  console.log(`✅ Closed promotional modal using selector: ${selector}`);
+                  closedCount++;
+                  break;
+                } catch (e) {
+                  console.log(`⚠️ Failed to click close button: ${e}`);
+                }
+              }
+            }
+          }
+        }
+
+        // Strategy 3: Look for any modal dialogs and try to close them
+        const modals = Array.from(document.querySelectorAll('[role="dialog"], .modal, [data-testid*="modal"]'));
+
+        for (const modal of modals) {
+          console.log(`Found modal: "${modal.textContent?.substring(0, 100)}"`);
+
+          // Skip if it looks like a cart or menu modal (we want to keep those)
+          const modalText = modal.textContent?.toLowerCase() || '';
+          if (modalText.includes('cart') || modalText.includes('menu') || modalText.includes('order')) {
+            continue;
+          }
+
+          for (const selector of closeButtonSelectors) {
+            const closeBtn = modal.querySelector(selector);
+            if (closeBtn && closeBtn instanceof HTMLElement) {
+              try {
+                closeBtn.click();
+                console.log(`✅ Closed modal using selector: ${selector}`);
+                closedCount++;
+                break;
+              } catch (e) {
+                console.log(`⚠️ Failed to click close button in modal: ${e}`);
+              }
+            }
+          }
+        }
+
+        // Strategy 4: Look for overlay backgrounds and click them to dismiss
+        const overlays = Array.from(document.querySelectorAll('[data-testid*="overlay"], .overlay, [class*="backdrop"]'));
+
+        for (const overlay of overlays) {
+          try {
+            const style = window.getComputedStyle(overlay);
+            if (style.position === 'fixed' && style.zIndex && parseInt(style.zIndex) > 100) {
+              (overlay as HTMLElement).click();
+              console.log(`✅ Clicked overlay to dismiss modal`);
+              closedCount++;
+              break; // Only click one overlay
+            }
+          } catch (e) {
+            console.log(`⚠️ Failed to click overlay: ${e}`);
+          }
+        }
+
+        return closedCount;
+      });
+
+      if (modalsClosed > 0) {
+        console.log(`✅ Closed ${modalsClosed} promotional modal(s)`);
+        // Wait for modals to fully close
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      } else {
+        console.log('ℹ️ No promotional modals detected');
+      }
+
+    } catch (error) {
+      console.log('⚠️ Error while checking for promotional modals:', error);
+    }
+  }
+
   async setDeliveryAddress(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
+
+    // Check for promotional modals before setting address
+    await this.closePromotionalModals();
 
     console.log('Setting delivery address...');
 
@@ -308,33 +443,26 @@ export class UberEatsAgent {
   async searchForFood(query: string): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
+    // Check for promotional modals before searching
+    await this.closePromotionalModals();
+
     console.log(`Searching for: ${query}`);
 
-    const searchSelectors = [
-      'input[placeholder*="Food, groceries, drinks"]',
-      'input[placeholder*="Search"]',
-      '[data-testid="search-input"]',
-      'input[type="search"]'
-    ];
-
-    let searchInput = null;
-    for (const selector of searchSelectors) {
-      searchInput = await this.page.$(selector);
-      if (searchInput) break;
-    }
-
-    if (searchInput) {
-      await searchInput.click();
-      await this.page.keyboard.type(query, { delay: 50 });
-      await this.page.keyboard.press('Enter');
-      await new Promise(resolve => setTimeout(resolve, 3000));
-    } else {
-      throw new Error('Could not find search input');
-    }
+    const sel = this.page.locator('#search-suggestions-typeahead-input');
+    await this.page.waitForNetworkIdle();
+    console.log(sel);
+    console.log(query);
+    await sel.click();
+    await sel.fill(query);
+    await this.page.keyboard.press('Enter');
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   async selectRestaurant(preferences: Partial<MealDecision> = {}): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
+
+    // Check for promotional modals before selecting restaurant
+    await this.closePromotionalModals();
 
     console.log('Analyzing restaurants with AI...');
 

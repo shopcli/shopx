@@ -12,7 +12,9 @@
     "lint": "eslint . --ext .ts",
     "typecheck": "tsc --noEmit",
     "save-cookies": "npm run build && node dist/save-cookies.js",
-    "test-auth": "npm run build && node dist/test-auth.js"
+    "test-auth": "npm run build && node dist/test-auth.js",
+    "debug-auth": "npm run build && node dist/debug-auth.js",
+    "import-cookies": "npm run build && node dist/import-cookies.js"
   },
   "keywords": [
     "uber-eats",
