@@ -13,6 +13,8 @@ const __dirname = dirname(__filename);
 
 dotenv.config();
 
+const AI_MODEL = 'cohere/command-a'
+
 interface Product {
 	title: string;
 	brand: string;
@@ -168,9 +170,9 @@ class ShopAppAgent {
 				const response = await axios.post(
 					'https://openrouter.ai/api/v1/chat/completions',
 					{
-						model: 'openai/gpt-oss-120b',
+						model: AI_MODEL,
 						messages: [{role: 'user', content: prompt}],
-						max_tokens: 500,
+						max_tokens: 10000,
 					},
 					{
 						headers: {
@@ -289,25 +291,26 @@ class ShopAppAgent {
 
 			const prompt = `From the following product list, select the 5 best matches for: "${userPrompt}".
 
+			Guidelines:
+			- Prioritize relevance to the query as much as possible.  
+			- Consider price when ranking the matches.  
+			- RETURN EXACTLY 5 ITEMS. FIVE (5) ITEMS.
+			- RETURN ONLY THE PRODUCT TITLES, ONE PER LINE, IN ORDER OF PREFERENCE.  
+			- DO NOT change or alter the original product titles in any way.
+			- DO NOT RETURN ANY NUMBER OR ANYTHING ELSE OTHER THAN THE PRODUCT TITLES.
+
 			Products:
 			${productList}
-			
-			Guidelines:
-			- Prioritize relevance to the query as much as possible. Do not select unrelated items.  
-			- Consider price when ranking the matches.  
-			- Select only unique items (do not include duplicates with the same name).  
-			- Return exactly 5 items.  
-			- Return only the product titles, one per line, in order of preference.  
-			- DO NOT change or alter the original product titles in any way.`;
+			`;
 
 		try {
 			return await this.retryWithBackoff(async () => {
 				const response = await axios.post(
 					'https://openrouter.ai/api/v1/chat/completions',
 					{
-						model: 'openai/gpt-oss-120b',
+						model: AI_MODEL,
 						messages: [{role: 'user', content: prompt}],
-						max_tokens: 5000,
+						max_tokens: 20000,
 					},
 					{
 						headers: {
@@ -324,7 +327,7 @@ class ShopAppAgent {
 					.map(line => line.trim())
 					.filter(line => line.length > 0);
 
-				const selectedProducts: Product[] = [];
+				let selectedProducts: Product[] = [];
 
 				for (const title of selectedTitles) {
 					const product = products.find(
@@ -335,6 +338,11 @@ class ShopAppAgent {
 					if (product && selectedProducts.length < 5) {
 						selectedProducts.push(product);
 					}
+				}
+
+				if (selectedProducts.length !== 5) {
+					// crop it to 5
+					selectedProducts = selectedProducts.slice(0, 5);
 				}
 
 				return selectedProducts;
@@ -517,9 +525,9 @@ class ShopAppAgent {
 				const response = await axios.post(
 					'https://openrouter.ai/api/v1/chat/completions',
 					{
-						model: 'openai/gpt-oss-120b',
+						model: AI_MODEL,
 						messages: [{role: 'user', content: prompt}],
-						max_tokens: 1500,
+						max_tokens: 10000,
 					},
 					{
 						headers: {
@@ -530,8 +538,9 @@ class ShopAppAgent {
 				);
 
 				const data = response.data as OpenRouteResponse;
+				const parsed = parseInt(data.choices[0]?.message.content || '0');
 				// @ts-ignore
-				return parseInt(data.choices[0].message.content);
+				return parsed;
 			}, "Getting selected product");
 		} catch (error) {
 			console.error('Error getting selected product:', error);
@@ -556,9 +565,9 @@ class ShopAppAgent {
 			const response = await axios.post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
-					model: 'openai/gpt-oss-120b',
+					model: AI_MODEL,
 					messages: [{role: 'user', content: prompt}],
-					max_tokens: 1500,
+					max_tokens: 10000,
 				},
 				{
 					headers: {
@@ -603,12 +612,16 @@ class ShopAppAgent {
 				
 				const selectedProductIndex = await this.getSelectedProduct(selectedProducts, selectedOption);
 				// Find the selected product by title
-				const selectedProduct = selectedProducts[selectedProductIndex - 1];
-				await this.callback.sendMessage(`User selected: ${selectedProduct?.title}`, ["user selected product as best match", "routing to correct product page"]);
+				let selectedProduct = selectedProducts[selectedProductIndex - 1];
+
+				await this.callback.sendMessage(`User selected a product!`, ["user selected product as best match", "routing to correct product page"]);
 				
 				// Save the original selection for potential retry
 				if (!selectedProduct) {
-					throw new Error("Selected product is undefined");
+					selectedProduct = selectedProducts[0];
+				}
+				if (!selectedProduct) {
+					throw new Error("No products available for selection");
 				}
 				const originalSelection = {
 					selectedProduct,
