@@ -11,13 +11,16 @@
 		"build": "tsc",
 		"dev": "tsc --watch",
 		"test": "prettier --check . && xo && ava",
-        "dev-shop": "ts-node tools/shopapp/agent.ts",
-      "dev-cli": "tsc --watch --project ./cli"
+		"dev-shop": "ts-node tools/shopapp/agent.ts",
+		"dev-cli": "tsc --watch --project ./cli"
 	},
 	"files": [
 		"dist"
 	],
 	"dependencies": {
+		"@elevenlabs/elevenlabs-js": "^2.15.0",
+		"axios": "^1.6.0",
+		"dotenv": "^16.3.1",
 		"fullscreen-ink": "^0.1.0",
 		"ink": "^5.2.1",
 		"ink-big-text": "^2.0.0",
@@ -28,13 +31,12 @@
 		"ink-text-input": "^6.0.0",
 		"ink-use-stdout-dimensions": "^1.0.5",
 		"meow": "^11.0.0",
-		"react": "^18.2.0",
-        "playwright": "^1.40.0",
-        "axios": "^1.6.0",
-        "dotenv": "^16.3.1"
+		"playwright": "^1.40.0",
+		"react": "^18.2.0"
 	},
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
+		"@types/node": "^20.0.0",
 		"@types/react": "^18.0.32",
 		"@vdemedes/prettier-config": "^2.0.1",
 		"ava": "^5.2.0",
@@ -46,8 +48,7 @@
 		"prettier": "^2.8.8",
 		"ts-node": "^10.9.1",
 		"typescript": "^5.0.3",
-		"xo": "^0.53.1",
-      "@types/node": "^20.0.0"
+		"xo": "^0.53.1"
 	},
 	"ava": {
 		"extensions": {

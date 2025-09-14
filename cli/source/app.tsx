@@ -8,6 +8,7 @@ import {
 } from './components/index.js'
 import { CallbackMessage, Message } from './config/types.js'
 import { callShopapp } from '../../tools/shopapp/agent.js';
+import {speak} from '../../eleven-labs-boilerplate/example.mjs';
 
 class AppClass implements CallbackMessage {
 	constructor(
@@ -41,6 +42,7 @@ export default function App() {
 			content: message,
 			isUser: false,
 			timestamp: new Date(),}])
+		await speak(message)
 	}
 
 	// @ts-ignore
