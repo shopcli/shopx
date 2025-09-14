@@ -1,4 +1,4 @@
-import { Box, Text } from 'ink'
+import { Text } from 'ink'
 import React, { useEffect, useState } from 'react'
 import { loadingFlavourTexts } from '../config/flavour.js'
 
@@ -16,17 +16,12 @@ export default function FlavourText({ color = 'green' }: Props) {
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * loadingFlavourTexts.length)
       setCurrentText(loadingFlavourTexts[randomIndex] || '')
-    }, 10000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [])
 
   const paddedText = currentText.padEnd(50, ' ')
 
-  return (
-    <Box flexDirection="row" alignItems="center" width={80}>
-      {/* <Spinner type="dots9" /> */}
-      <Text color={color}> {paddedText}</Text>
-    </Box>
-  )
+  return <Text color={color}> {paddedText}</Text>
 }

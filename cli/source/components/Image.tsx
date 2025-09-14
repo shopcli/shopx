@@ -16,13 +16,6 @@ export default function Image(props: {
   useEffect(() => {
     const loadImage = async () => {
       try {
-        console.log(
-          'Loading image, src type:',
-          typeof props.src,
-          'is Buffer:',
-          props.src instanceof Buffer
-        )
-
         const { width, height, preserveAspectRatio } = props
         const options: {
           width?: string | number
@@ -44,7 +37,6 @@ export default function Image(props: {
 
         // Handle Buffer/Uint8Array for image data
         if (props.src instanceof Buffer || props.src instanceof Uint8Array) {
-          console.log('Processing buffer, length:', props.src.length)
           // Convert Buffer to Uint8Array if needed
           const buffer =
             props.src instanceof Buffer ? new Uint8Array(props.src) : props.src
@@ -52,7 +44,6 @@ export default function Image(props: {
             terminalImage.buffer(buffer, options),
             timeoutPromise,
           ])
-          console.log('Image loaded successfully, length:', result.length)
         } else {
           // Handle file path
           result = await Promise.race([
@@ -63,9 +54,6 @@ export default function Image(props: {
 
         // Check if result is empty or just whitespace
         if (!result || result.trim().length === 0) {
-          console.log(
-            'Image processing returned empty result, showing fallback'
-          )
           setImageString('🖼️ [Image loaded but terminal cannot display images]')
         } else {
           setImageString(result)

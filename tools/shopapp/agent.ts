@@ -59,7 +59,7 @@ class ShopAppAgent {
 				return await operation();
 			} catch (error) {
 				lastError = error as Error;
-				const errorMessage = `❌ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${lastError.message}`;
+				const errorMessage = ` ${operationName} failed (attempt ${attempt}/${maxRetries}): ${lastError.message}`;
 				await this.callback.sendMessage(errorMessage);
 				
 				if (attempt < maxRetries) {
@@ -157,8 +157,11 @@ class ShopAppAgent {
 	}
 
 	async generateSearchQuery(userPrompt: string): Promise<string> {
-		const prompt = `Convert this shopping request into an effective search query for an e-commerce site: "${userPrompt}". 
-    Return only the search query, no additional text. Focus on key product attributes like type, color, gender, brand, etc.`;
+		const prompt = `Convert the following shopping request into a concise and effective search query for an e-commerce site: <userPrompt>${userPrompt}</userPrompt>. 
+		- Focus on one or two key product attributes (e.g., type, color, gender, brand). 
+		- If the request is nonsensical or empty, generate a reasonable random product query instead. 
+		- ALWAYS return a valid search query suitable for an e-commerce search bar. 
+		- Return only the search query, no additional text.`;
 
 		try {
 			return await this.retryWithBackoff(async () => {
@@ -183,7 +186,7 @@ class ShopAppAgent {
 			}, "Generating search query");
 		} catch (error) {
 			console.error('Error generating search query:', error);
-			await this.callback.sendMessage(`⚠️ Failed to generate search query, using original prompt: ${userPrompt}`);
+			await this.callback.sendMessage(` Failed to generate search query, using original prompt: ${userPrompt}`);
 			return userPrompt;
 		}
 	}
@@ -192,25 +195,25 @@ class ShopAppAgent {
 		if (!this.page) throw new Error('Page not initialized');
 
 		// Page should already be on shop.app from loadCookies
-		await this.callback.sendMessage("Navigating to Shopapp...")
+		await this.callback.sendMessage("Shop.app has been selected for this query!", ["routed to https://shop.app", "setup agent metadata"])
 	}
 
 	async performSearch(searchQuery: string): Promise<void> {
-		await this.callback.sendMessage(`Searching Shopapp with ${searchQuery}`);
+		await this.callback.sendMessage(`Query ready! searching shop.app with \"${searchQuery}\"`, ["configuring encoding", "routing to correct search endpoint"]);
 		if (!this.page) throw new Error('Page not initialized');
 		
 		await this.retryWithBackoff(async () => {
 			const queryString = encodeURIComponent(searchQuery);
 			await this.page!.goto(`https://shop.app/search/results?query=${queryString}`);
 			
-			await this.callback.sendMessage("Waiting for search results");
+			await this.callback.sendMessage("Waiting for search results to load...");
 			await this.page!.waitForLoadState('load');
 			await this.page!.waitForTimeout(5000);
 		}, "Search operation");
 	}
 
 	async extractProducts(): Promise<Product[]> {
-		await this.callback.sendMessage("Gathering items")
+		await this.callback.sendMessage("Gathering items from shop.app search results", ["parsing search results", "extracting product information"])
 		if (!this.page) throw new Error('Page not initialized');
 
 		return await this.retryWithBackoff(async () => {
@@ -271,19 +274,31 @@ class ShopAppAgent {
 		products: Product[],
 		userPrompt: string,
 	): Promise<Product[]> {
-		await this.callback.sendMessage(`Picking best items from ${products.length} products`);
+		await this.callback.sendMessage(`Picking best items from ${products.length} products`, ["ranking products", "selecting best matches from user prompt"]);
 		if (products.length === 0) return [];
 
 		const productList = products
-			.map(p => `${p.title} - ${p.brand} - ${p.price}`)
+			.map(p => `{
+				Title: ${p.title}
+				Brand: ${p.brand}
+				Price: ${p.price}
+				Rating: ${p.rating}
+				Review Count: ${p.reviewCount}
+			}`)
 			.join('\n');
 
-		const prompt = `From these products, select the 5 best matches for: "${userPrompt}"
-    
-Products:
-${productList}
+			const prompt = `From the following product list, select the 5 best matches for: "${userPrompt}".
 
-Consider the price when making your selection. Return only the product titles, one per line, in order of preference. Do not change the original text of the product titles.`;
+			Products:
+			${productList}
+			
+			Guidelines:
+			- Prioritize relevance to the query as much as possible. Do not select unrelated items.  
+			- Consider price when ranking the matches.  
+			- Select only unique items (do not include duplicates with the same name).  
+			- Return exactly 5 items.  
+			- Return only the product titles, one per line, in order of preference.  
+			- DO NOT change or alter the original product titles in any way.`;
 
 		try {
 			return await this.retryWithBackoff(async () => {
@@ -326,7 +341,7 @@ Consider the price when making your selection. Return only the product titles, o
 			}, "Selecting best products");
 		} catch (error) {
 			console.error('Error selecting products:', error);
-			await this.callback.sendMessage(`⚠️ Failed to select best products, using first 5 products`);
+			await this.callback.sendMessage(`Failed to select best products, using first 5 products`);
 			return products.slice(0, 5);
 		}
 	}
@@ -439,7 +454,29 @@ Consider the price when making your selection. Return only the product titles, o
 			} else {
 				throw new Error('Buy now button not found with any selector');
 			}
-		}, "Clicking buy now button");
+		}, "Clicking buy now button", 1); // Only 1 retry for the main flow
+	}
+
+	async retryWithOriginalSelection(originalSelection: {selectedProduct: Product, selectedOption: string, selectedProductIndex: number}): Promise<void> {
+		await this.callback.sendMessage("🔄 Buy now failed, going back to search results to try again...");
+		
+		try {
+			// Go back to search results
+			await this.page!.goBack();
+			await this.page!.waitForLoadState('load');
+			await this.page!.waitForTimeout(3000);
+
+			// Use the exact same selection without re-asking the user
+			await this.callback.sendMessage(`🔄 Retrying with the same selection: ${originalSelection.selectedProduct.title}`);
+			
+			// Click the same product directly
+			await this.clickProduct(originalSelection.selectedProduct);
+			await this.clickBuyNow();
+			
+		} catch (error) {
+			await this.callback.sendMessage(` Retry failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			throw error;
+		}
 	}
 
 	async takeScreenshot(): Promise<void> {
@@ -447,25 +484,33 @@ Consider the price when making your selection. Return only the product titles, o
 
 		try {
 			const screenshot = await this.page.screenshot({
-				type: 'png',
+				type: 'jpeg',
 				fullPage: true,
 			});
 
-			await this.callback.sendMessage("Checkout reached")
+			await this.callback.sendMessage("Checkout reached", ["routing to checkout page", "taking screenshot of checkout page for confirmation"]);
 			const base64Image = screenshot.toString('base64');
 			this.callback.sendImage(base64Image);
+			this.callback.sendMessage("Your order has been set up successfully!")
 		} catch (error) {
 			console.error('Failed to take screenshot:', error);
 		}
 	}
 
 	async getSelectedProduct(selectedProducts: Product[], selectedOption: string): Promise<number> {
-		const prompt = `Always return an integer from 1 to 5. Even when the user input makes no sense,
-                return an integer from 1 to 5. Even if the user input is not a number, return an integer from 1 to 5.
-								Be sure to look for numbers like 1, 2, 3, 4, 5. and also work with words like first, second, third, fourth, fifth.
-								The user put this as what they wanted to buy: <selectedOption> ${selectedOption} </selectedOption>
-                Here are the products:
-${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
+		const prompt = `Your task is to return exactly one integer from 1 to 5, following the schema strictly. 
+		- Always return a single integer between 1 and 5. Never return anything else.  
+		- Even if the user input is nonsensical, irrelevant, or ambiguous, still return an integer from 1 to 5.  
+		- If the input clearly contains a number (e.g., "1", "2", "3", "4", "5") or words like "first", "second", "third", "fourth", "fifth", map them to the corresponding integer.  
+		- If the input is ambiguous, make your best guess by matching the theme of the input to the most relevant option.  
+		- If no strong match is found, return a reasonable fallback integer.  
+		- DO NOT break the schema under any circumstance.
+
+		The user provided this as what they want to buy: <selectedOption> ${selectedOption} </selectedOption>
+
+		Here are the products:
+		${selectedProducts.map((sp, index) => `${index + 1}. ${sp.title}`)}`;
+
 
 		try {
 			return await this.retryWithBackoff(async () => {
@@ -490,9 +535,43 @@ ${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
 			}, "Getting selected product");
 		} catch (error) {
 			console.error('Error getting selected product:', error);
-			await this.callback.sendMessage(`⚠️ Failed to parse product selection, defaulting to first product`);
+			await this.callback.sendMessage(` Failed to parse product selection, defaulting to first product`);
 			return 1;
 		}
+	}
+
+	async turnSelectedProductsIntoReadableNames(selectedProducts: Product[]): Promise<string[]> {
+		const prompt = `From the following product list, generate a simplified, user-friendly name for each product:
+		${selectedProducts.map(sp => sp.title).join(', ')}
+
+		Guidelines:
+		- Convert long, SEO-optimized titles into short, clear names that are easy for users to understand.  
+		- Keep the name close to the original — do not change it so much that it becomes confusing or misleading.  
+		- Preserve the core meaning and key product identifiers (e.g., type, brand, or model if important).  
+		- Return only the readable names, one per line.  
+		- Do not return any additional text or formatting.`;
+
+
+		return await this.retryWithBackoff(async () => {
+			const response = await axios.post(
+				'https://openrouter.ai/api/v1/chat/completions',
+				{
+					model: 'openai/gpt-oss-120b',
+					messages: [{role: 'user', content: prompt}],
+					max_tokens: 1500,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${this.openRouteApiKey}`,
+						'Content-Type': 'application/json',
+					},
+				},
+			);
+
+			const data = response.data as OpenRouteResponse;
+			// @ts-ignore
+			return data.choices[0].message.content.split('\n').map(line => line.trim());
+		}, "Turning selected products into readable names");
 	}
 
 	async run(userPrompt: string): Promise<void> {
@@ -500,7 +579,6 @@ ${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
 			await this.initialize();
 
 			const searchQuery = await this.generateSearchQuery(userPrompt);
-			await this.callback.sendMessage(`Search query: ${searchQuery}`);
 
 			await this.navigateToShopApp();
 
@@ -509,7 +587,7 @@ ${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
 			const products = await this.extractProducts();
 
 			if (products.length === 0) {
-				await this.callback.sendMessage("❌ No products found. The search might have failed or the page structure changed.");
+				await this.callback.sendMessage(" No products found. The search might have failed or the page structure changed.");
 				return;
 			}
 
@@ -518,27 +596,68 @@ ${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
 				userPrompt,
 			);
 
-			if (selectedProducts.length > 0) {
-				const selectedOption = await this.callback.sendOptions(selectedProducts.map(sp => sp.title))
+			const turnSelectedProductsIntoReadableNames = await this.turnSelectedProductsIntoReadableNames(selectedProducts);
 
+			if (selectedProducts.length > 0) {
+				const selectedOption = await this.callback.sendOptions(turnSelectedProductsIntoReadableNames)
+				
 				const selectedProductIndex = await this.getSelectedProduct(selectedProducts, selectedOption);
 				// Find the selected product by title
 				const selectedProduct = selectedProducts[selectedProductIndex - 1];
+				await this.callback.sendMessage(`User selected: ${selectedProduct?.title}`, ["user selected product as best match", "routing to correct product page"]);
+				
+				// Save the original selection for potential retry
+				if (!selectedProduct) {
+					throw new Error("Selected product is undefined");
+				}
+				const originalSelection = {
+					selectedProduct,
+					selectedOption,
+					selectedProductIndex
+				};
+				
 				if (selectedProduct) {
 					await this.clickProduct(selectedProduct);
 
-					await this.clickBuyNow();
+					try {
+						await this.clickBuyNow();
+					} catch (error) {
+						// If buy now fails, try going back to search and retrying with original selection
+						if (error instanceof Error && error.message.includes("Clicking buy now button failed after")) {
+							await this.retryWithOriginalSelection(originalSelection);
+						} else {
+							throw error;
+						}
+					}
 				} else {
-					await this.callback.sendMessage("⚠️ Selected product not found, using first available product");
-					// @ts-ignore
-					await this.clickProduct(selectedProducts[0]);
-					await this.clickBuyNow();
+					await this.callback.sendMessage("Selected product not found, using first available product");
+					const fallbackProduct = selectedProducts[0];
+					if (!fallbackProduct) {
+						throw new Error("No products available for fallback");
+					}
+					const fallbackSelection = {
+						selectedProduct: fallbackProduct,
+						selectedOption: fallbackProduct.title,
+						selectedProductIndex: 1
+					};
+					
+					await this.clickProduct(fallbackProduct);
+					try {
+						await this.clickBuyNow();
+					} catch (error) {
+						// If buy now fails, try going back to search and retrying with original selection
+						if (error instanceof Error && error.message.includes("Clicking buy now button failed after")) {
+							await this.retryWithOriginalSelection(fallbackSelection);
+						} else {
+							throw error;
+						}
+					}
 				}
 			} else {
-				await this.callback.sendMessage("❌ No products could be selected for purchase.");
+				await this.callback.sendMessage("No products could be selected for purchase.");
 			}
 		} catch (error) {
-			const errorMessage = `❌ Critical error in agent execution: ${error instanceof Error ? error.message : 'Unknown error'}`;
+			const errorMessage = `Critical error in agent execution: ${error instanceof Error ? error.message : 'Unknown error'}`;
 			console.error('Error in agent execution:', error);
 			await this.callback.sendMessage(errorMessage);
 		} finally {

@@ -41,7 +41,7 @@ function AIMessage({ message }: { message: Message }) {
 
 function ImageMessage({ message }: { message: ImageMessage }) {
   return (
-    <Box>
+    <Box flexDirection="column" padding={1}>
       <Image src={message.imageBase64Buffer} alt="" />
     </Box>
   )

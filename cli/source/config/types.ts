@@ -16,7 +16,7 @@ export interface ImageMessage {
 export type BaseMessage = Message | ImageMessage
 
 export interface CallbackMessage {
-	sendMessage(message: string): Promise<void>;
+	sendMessage(message: string, subcontent?: string[]): Promise<void>;
 	sendImage(imageBase64: string): void;
 	sendOptions(options: string[]): Promise<string>;
 }

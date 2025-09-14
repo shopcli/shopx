@@ -35,6 +35,9 @@ export default function Header() {
       <Text color={semiMutedColor}>
         3. <Text color="green">/help</Text> for more information.
       </Text>
+      <Text color={semiMutedColor}>
+        4. <Text color="green">/clear</Text> to clear the screen.
+      </Text>
     </>
   )
 }
