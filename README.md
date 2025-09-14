@@ -1,6 +1,6 @@
 # shopx
 
-https://img.shields.io/badge/hack_the_north-2025-purple
+![Static Badge](https://img.shields.io/badge/hack_the_north-2025-purple)
 
 ![shopx](.github/images/image.png)
 
