@@ -36,7 +36,7 @@ export default function InputArea({ onSubmit, isTakingInput }: Props) {
         minWidth={50}
       >
         <Box flexGrow={1} flexDirection="row" gap={1} alignItems="center">
-          <Text color="blue">{'> '}</Text>
+          <Text color="green">{'> '}</Text>
           <TextInput
             value={value}
             onChange={handleChange}

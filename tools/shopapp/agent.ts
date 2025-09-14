@@ -47,11 +47,43 @@ class ShopAppAgent {
 
 	async initialize(): Promise<void> {
 		this.browser = await chromium.launch({
-			headless: false,
-			args: ['--no-sandbox', '--disable-setuid-sandbox'],
+			headless: true,
+			args: [
+				'--no-sandbox', 
+				'--disable-setuid-sandbox',
+				'--enable-javascript',
+				'--disable-web-security',
+				'--disable-features=VizDisplayCompositor',
+				'--disable-dev-shm-usage',
+				'--disable-gpu',
+				'--disable-extensions',
+				'--disable-plugins',
+				'--disable-images',
+				'--disable-background-timer-throttling',
+				'--disable-backgrounding-occluded-windows',
+				'--disable-renderer-backgrounding',
+				'--disable-field-trial-config',
+				'--disable-ipc-flooding-protection',
+				'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+			],
 		});
 		this.page = await this.browser.newPage();
 		await this.page.setViewportSize({width: 1280, height: 720});
+		
+		// Additional headless mode configurations
+		await this.page.setExtraHTTPHeaders({
+			'Accept-Language': 'en-US,en;q=0.9'
+		});
+		
+		// Block unnecessary resources to speed up loading
+		await this.page.route('**/*', (route) => {
+			const resourceType = route.request().resourceType();
+			if (['image', 'media', 'font'].includes(resourceType)) {
+				route.abort();
+			} else {
+				route.continue();
+			}
+		});
 
 		// Load cookies if they exist
 		await this.loadCookies();
@@ -79,15 +111,10 @@ class ShopAppAgent {
 					}));
 
 					await this.page.context().addCookies(cookiesToAdd);
-					// console.log(`Loaded ${cookiesData.cookies.length} cookies`);
 
 					// Now navigate to the site with cookies loaded
 					await this.page.goto('https://shop.app');
 					await this.page.waitForLoadState('load');
-
-					// Verify cookies are loaded
-					// const currentCookies = await this.page.context().cookies();
-					// console.log(`Current cookies after load: ${currentCookies.length}`);
 
 					// Check if we're logged in by looking for user-specific elements
 					try {
@@ -96,14 +123,11 @@ class ShopAppAgent {
 							{timeout: 3000},
 						);
 						if (userElement) {
-							// console.log('Successfully authenticated - user elements found');
 						}
 					} catch (e) {
-						// console.log('No user elements found - may not be logged in');
 					}
 				}
 			} else {
-				// console.log('No cookies file found, proceeding without authentication');
 				await this.page.goto('https://shop.app');
 				await this.page.waitForLoadState('load');
 			}
@@ -122,7 +146,7 @@ class ShopAppAgent {
 			const response = await axios.post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				{
-					model: 'openai/gpt-3.5-turbo',
+					model: 'openai/gpt-oss-120b',
 					messages: [{role: 'user', content: prompt}],
 					max_tokens: 500,
 				},
@@ -147,40 +171,18 @@ class ShopAppAgent {
 		if (!this.page) throw new Error('Page not initialized');
 
 		// Page should already be on shop.app from loadCookies
-		// console.log('Already on shop.app, ready to search');
-		await this.callback.sendMessage("Navigating to Shopapp")
+		await this.callback.sendMessage("Navigating to Shopapp...")
 	}
 
 	async performSearch(searchQuery: string): Promise<void> {
 		await this.callback.sendMessage(`Searching Shopapp with ${searchQuery}`);
 		if (!this.page) throw new Error('Page not initialized');
+		
+		const queryString = encodeURIComponent(searchQuery);
 
-		const searchSelectors = [
-			'input[name="search"]',
-			'input[data-testid="search-input"]',
-			'input[role="searchbox"]',
-			'input[type="search"]',
-		];
-
-		let searchInput = null;
-		for (const selector of searchSelectors) {
-			try {
-				searchInput = await this.page.waitForSelector(selector, {
-					timeout: 5000,
-				});
-				if (searchInput) break;
-			} catch (e) {
-				continue;
-			}
-		}
-
-		if (!searchInput) {
-			throw new Error('Could not find search input');
-		}
-
-		await searchInput.click();
-		await searchInput.fill(searchQuery);
-		await searchInput.press('Enter');
+		await this.page.goto(`https://shop.app/search?q=${queryString}`);
+		
+		await this.callback.sendMessage("Waiting for search results")
 		await this.page.waitForLoadState('load');
 		await this.page.waitForTimeout(5000);
 	}
@@ -305,10 +307,7 @@ Consider the price when making your selection. Return only the product titles, o
 				const titleElement = await card.$('[data-testid="product-title"]');
 				if (titleElement) {
 					const title = await titleElement.textContent();
-					// console.log(`Title: ${title}`);
-					// console.log(`Product title: ${product.title}`);
 					if (title && title.trim() === product.title) {
-						// console.log(`Found product: ${title}`);
 						const linkElement = await card.$(
 							'a[data-testid="product-link-test-id"]',
 						);
@@ -316,7 +315,6 @@ Consider the price when making your selection. Return only the product titles, o
 							await linkElement.click();
 							await this.page.waitForLoadState('load');
 							await this.page.waitForTimeout(5000);
-							// console.log(`Clicked on product: ${product.title}`);
 							return;
 						}
 					}
@@ -341,7 +339,6 @@ Consider the price when making your selection. Return only the product titles, o
 			await buyNowButton.click();
 			await this.page.waitForLoadState('load');
 			await this.page.waitForTimeout(5000);
-			// console.log('Buy now button clicked!');
 
 			// Take screenshot and encode as base64
 			await this.takeScreenshot();
@@ -354,7 +351,6 @@ Consider the price when making your selection. Return only the product titles, o
 		if (!this.page) throw new Error('Page not initialized');
 
 		try {
-			// console.log('Taking screenshot...');
 			const screenshot = await this.page.screenshot({
 				type: 'png',
 				fullPage: true,
@@ -363,67 +359,77 @@ Consider the price when making your selection. Return only the product titles, o
 			await this.callback.sendMessage("Checkout reached")
 			const base64Image = screenshot.toString('base64');
 			this.callback.sendImage(base64Image);
-			// console.log('Screenshot captured (base64):');
-			// console.log(`data:image/png;base64,${base64Image}`);
-
-			const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-			const filename = `screenshot-${timestamp}.png`;
-			// @ts-ignore
-			const filepath = path.join(__dirname, filename);
-
-			// fs.writeFileSync(filepath, screenshot);
-			// console.log(`Screenshot also saved to: ${filename}`);
 		} catch (error) {
 			console.error('Failed to take screenshot:', error);
 		}
 	}
 
+	async getSelectedProduct(selectedProducts: Product[], selectedOption: string): Promise<number> {
+		const prompt = `Always return an integer from 1 to 5. Even when the user input makes no sense,
+                return an integer from 1 to 5. Even if the user input is not a number, return an integer from 1 to 5.
+								Be sure to look for numbers like 1, 2, 3, 4, 5. and also work with words like first, second, third, fourth, fifth.
+								The user put this as what they wanted to buy: <selectedOption> ${selectedOption} </selectedOption>
+                Here are the products:
+${selectedProducts.map((sp,index) => `${index + 1}. ${sp.title}`)}`
+
+		try {
+			const response = await axios.post(
+				'https://openrouter.ai/api/v1/chat/completions',
+				{
+					model: 'openai/gpt-oss-120b',
+					messages: [{role: 'user', content: prompt}],
+					max_tokens: 1500,
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${this.openRouteApiKey}`,
+						'Content-Type': 'application/json',
+					},
+				},
+			);
+
+			const data = response.data as OpenRouteResponse;
+			// @ts-ignore
+			return parseInt(data.choices[0].message.content);
+		} catch (error) {
+			console.error('Error getting selected product:', error);
+			return 0;
+		}
+	}
+
 	async run(userPrompt: string): Promise<void> {
 		try {
-			// console.log('Initializing agent...');
 			await this.initialize();
 
-			// console.log('Generating search query...');
 			const searchQuery = await this.generateSearchQuery(userPrompt);
-			// console.log(`Search query: ${searchQuery}`);
+			await this.callback.sendMessage(`Search query: ${searchQuery}`);
 
-			// console.log('Navigating to shop.app...');
 			await this.navigateToShopApp();
 
-			// console.log('Performing search...');
 			await this.performSearch(searchQuery);
 
-			// console.log('Extracting products...');
 			const products = await this.extractProducts();
-			// console.log(`Found ${products.length} products`);
 
 			if (products.length === 0) {
-				// console.log('No products found');
 				return;
 			}
 
-			// console.log('Selecting best products...');
-			// console.log(products.map(p => `${p.title} - ${p.price}`));
 			const selectedProducts = await this.selectBestProducts(
 				products,
 				userPrompt,
 			);
-			// console.log(`Selected ${selectedProducts.length} products`);
 
 			if (selectedProducts.length > 0) {
 				const selectedOption = await this.callback.sendOptions(selectedProducts.map(sp => sp.title))
-				console.log(`User selected: ${selectedOption}`);
-				
+
+				const selectedProductIndex = await this.getSelectedProduct(selectedProducts, selectedOption);
 				// Find the selected product by title
-				const selectedProduct = selectedProducts.find(p => p.title === selectedOption);
+				const selectedProduct = selectedProducts[selectedProductIndex - 1];
 				if (selectedProduct) {
-					console.log('Clicking on selected product...');
 					await this.clickProduct(selectedProduct);
 
-					console.log('Clicking buy now...');
 					await this.clickBuyNow();
 				} else {
-					console.log('Selected product not found, using first product');
 					// @ts-ignore
 					await this.clickProduct(selectedProducts[0]);
 					await this.clickBuyNow();
@@ -445,7 +451,6 @@ export default ShopAppAgent;
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const userPrompt = process.argv[2];
 	if (!userPrompt) {
-		// console.log('Usage: npm run dev "I want a plain white t shirt for a man"');
 		process.exit(1);
 	}
 

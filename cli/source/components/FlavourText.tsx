@@ -22,12 +22,12 @@ export default function FlavourText({ color = 'green' }: Props) {
     return () => clearInterval(interval)
   }, [])
 
+  const paddedText = currentText.padEnd(50, ' ')
+
   return (
-    <Box flexDirection="row" alignItems="center">
-      <Text color={color}>
-        <Spinner type="dots9" />
-      </Text>
-      <Text color={color}> {currentText}</Text>
+    <Box flexDirection="row" alignItems="center" width={80}>
+      <Spinner type="dots9" />
+      <Text color={color}> {paddedText}</Text>
     </Box>
   )
 }

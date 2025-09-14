@@ -111,6 +111,7 @@ export default function App() {
       // User is responding to options - resolve the promise with their selection
       setIsTakingInput(false)
       setIsRespondingToOptions(false)
+      // @ts-ignore
       pendingOptionsResolve(content)
       setPendingOptionsResolve(null)
       return
