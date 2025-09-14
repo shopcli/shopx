@@ -52,3 +52,5 @@ if you get permission errors, you can try the very sus option of using sudo:
 ```bash
 sudo npm install -g .
 ```
+
+enjoy shopping from your humble terminal (◡◕⏖◕)ᑐ🝐 ⠁⭒*.✩.*⭒⠁
