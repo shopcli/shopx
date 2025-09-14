@@ -7,6 +7,9 @@
 
 claude code... but for shopping!
 
+## What is shopx?
+A command-line shopping assistant that lets you buy stuff discreetly from your terminal. Type what you need in natural language, and shopx handles the rest.
+
 ## Setup
 
 **Note:** This is a hacky project we built at a hackathon, so expect some rough edges!
