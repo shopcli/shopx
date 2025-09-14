@@ -4,21 +4,21 @@ import React, { useState } from 'react'
 
 interface Props {
   onSubmit: (message: string) => void
-  isProcessing: boolean
+  isTakingInput: boolean
 }
 
-export default function InputArea({ onSubmit, isProcessing }: Props) {
+export default function InputArea({ onSubmit, isTakingInput }: Props) {
   const [value, setValue] = useState('')
 
   const handleSubmit = (input: string) => {
-    if (input.trim() && !isProcessing) {
+    if (input.trim() && isTakingInput) {
       onSubmit(input.trim())
       setValue('')
     }
   }
 
   const handleChange = (input: string) => {
-    if (!isProcessing) {
+    if (isTakingInput) {
       setValue(input)
     }
   }
@@ -42,7 +42,7 @@ export default function InputArea({ onSubmit, isProcessing }: Props) {
             onChange={handleChange}
             onSubmit={handleSubmit}
             placeholder={
-              isProcessing ? 'Processing...' : 'Type your message...'
+              isTakingInput ? 'Type your message...' : 'Processing...'
             }
           />
         </Box>
@@ -53,7 +53,7 @@ export default function InputArea({ onSubmit, isProcessing }: Props) {
         justifyContent="space-between"
       >
         <Text color="gray">Press Enter to send</Text>
-        <Text color="gray">{isProcessing ? 'Processing...' : 'Ready'}</Text>
+        <Text color="gray">{isTakingInput ? 'Ready' : 'Processing...'}</Text>
         <Text color="gray">Press Ctrl+C to exit</Text>
       </Box>
     </Box>

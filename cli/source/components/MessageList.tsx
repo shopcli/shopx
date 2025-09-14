@@ -1,10 +1,12 @@
 import { Box, Text } from 'ink'
+// @ts-ignore
 import React from 'react'
 import { mutedColor } from '../config/colors.js'
-import { Message } from '../config/types.js'
+import { BaseMessage, ImageMessage, Message } from '../config/types.js'
+import { Image } from './index.js'
 
 interface Props {
-  messages: Message[]
+  messages: BaseMessage[]
 }
 
 function UserMessage({ message }: { message: Message }) {
@@ -37,12 +39,28 @@ function AIMessage({ message }: { message: Message }) {
   )
 }
 
+function ImageMessage({ message }: { message: ImageMessage }) {
+  return (
+    <Box>
+      <Image src={message.imageBase64Buffer} alt="" />
+    </Box>
+  )
+}
+
 export default function MessageList({ messages }: Props) {
+  const isUserMessage = (message: BaseMessage) =>
+    message.isUser && 'content' in message
+  const isImageMessage = (message: BaseMessage) =>
+    'imageBase64Buffer' in message
+
   return (
     <Box flexDirection="column" paddingY={1} flexGrow={1}>
       {messages.map(message =>
-        message.isUser ? (
+        isUserMessage(message) ? (
+          // @ts-ignore
           <UserMessage key={message.id} message={message} />
+        ) : isImageMessage(message) ? (
+          <ImageMessage key={message.id} message={message} />
         ) : (
           <AIMessage key={message.id} message={message} />
         )

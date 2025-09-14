@@ -6,8 +6,17 @@ export interface Message {
   subcontent?: string[]
 }
 
+export interface ImageMessage {
+  id: string
+  imageBase64Buffer: Buffer
+  isUser: boolean
+  timestamp: Date
+}
+
+export type BaseMessage = Message | ImageMessage
+
 export interface CallbackMessage {
 	sendMessage(message: string): Promise<void>;
 	sendImage(imageBase64: string): void;
-	sendOptions(options: string[]): Promise<void>;
+	sendOptions(options: string[]): Promise<string>;
 }

@@ -1,12 +1,12 @@
 import axios from 'axios';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
+import { fileURLToPath } from 'node:url';
 import * as path from 'path';
-import {chromium} from 'playwright';
-import type {Browser, Page} from 'playwright';
-import type {CallbackMessage, Message} from '../../cli/source/config/types.js';
-import {fileURLToPath} from 'node:url';
-import {dirname} from 'path';
+import { dirname } from 'path';
+import type { Browser, Page } from 'playwright';
+import { chromium } from 'playwright';
+import type { CallbackMessage, Message } from '../../cli/source/config/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,15 +79,15 @@ class ShopAppAgent {
 					}));
 
 					await this.page.context().addCookies(cookiesToAdd);
-					console.log(`Loaded ${cookiesData.cookies.length} cookies`);
+					// console.log(`Loaded ${cookiesData.cookies.length} cookies`);
 
 					// Now navigate to the site with cookies loaded
 					await this.page.goto('https://shop.app');
 					await this.page.waitForLoadState('load');
 
 					// Verify cookies are loaded
-					const currentCookies = await this.page.context().cookies();
-					console.log(`Current cookies after load: ${currentCookies.length}`);
+					// const currentCookies = await this.page.context().cookies();
+					// console.log(`Current cookies after load: ${currentCookies.length}`);
 
 					// Check if we're logged in by looking for user-specific elements
 					try {
@@ -96,14 +96,14 @@ class ShopAppAgent {
 							{timeout: 3000},
 						);
 						if (userElement) {
-							console.log('Successfully authenticated - user elements found');
+							// console.log('Successfully authenticated - user elements found');
 						}
 					} catch (e) {
-						console.log('No user elements found - may not be logged in');
+						// console.log('No user elements found - may not be logged in');
 					}
 				}
 			} else {
-				console.log('No cookies file found, proceeding without authentication');
+				// console.log('No cookies file found, proceeding without authentication');
 				await this.page.goto('https://shop.app');
 				await this.page.waitForLoadState('load');
 			}
@@ -147,7 +147,7 @@ class ShopAppAgent {
 		if (!this.page) throw new Error('Page not initialized');
 
 		// Page should already be on shop.app from loadCookies
-		console.log('Already on shop.app, ready to search');
+		// console.log('Already on shop.app, ready to search');
 		await this.callback.sendMessage("Navigating to Shopapp")
 	}
 
@@ -305,10 +305,10 @@ Consider the price when making your selection. Return only the product titles, o
 				const titleElement = await card.$('[data-testid="product-title"]');
 				if (titleElement) {
 					const title = await titleElement.textContent();
-					console.log(`Title: ${title}`);
-					console.log(`Product title: ${product.title}`);
+					// console.log(`Title: ${title}`);
+					// console.log(`Product title: ${product.title}`);
 					if (title && title.trim() === product.title) {
-						console.log(`Found product: ${title}`);
+						// console.log(`Found product: ${title}`);
 						const linkElement = await card.$(
 							'a[data-testid="product-link-test-id"]',
 						);
@@ -316,7 +316,7 @@ Consider the price when making your selection. Return only the product titles, o
 							await linkElement.click();
 							await this.page.waitForLoadState('load');
 							await this.page.waitForTimeout(5000);
-							console.log(`Clicked on product: ${product.title}`);
+							// console.log(`Clicked on product: ${product.title}`);
 							return;
 						}
 					}
@@ -341,7 +341,7 @@ Consider the price when making your selection. Return only the product titles, o
 			await buyNowButton.click();
 			await this.page.waitForLoadState('load');
 			await this.page.waitForTimeout(5000);
-			console.log('Buy now button clicked!');
+			// console.log('Buy now button clicked!');
 
 			// Take screenshot and encode as base64
 			await this.takeScreenshot();
@@ -354,7 +354,7 @@ Consider the price when making your selection. Return only the product titles, o
 		if (!this.page) throw new Error('Page not initialized');
 
 		try {
-			console.log('Taking screenshot...');
+			// console.log('Taking screenshot...');
 			const screenshot = await this.page.screenshot({
 				type: 'png',
 				fullPage: true,
@@ -363,8 +363,8 @@ Consider the price when making your selection. Return only the product titles, o
 			await this.callback.sendMessage("Checkout reached")
 			const base64Image = screenshot.toString('base64');
 			this.callback.sendImage(base64Image);
-			console.log('Screenshot captured (base64):');
-			console.log(`data:image/png;base64,${base64Image}`);
+			// console.log('Screenshot captured (base64):');
+			// console.log(`data:image/png;base64,${base64Image}`);
 
 			const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 			const filename = `screenshot-${timestamp}.png`;
@@ -372,7 +372,7 @@ Consider the price when making your selection. Return only the product titles, o
 			const filepath = path.join(__dirname, filename);
 
 			// fs.writeFileSync(filepath, screenshot);
-			console.log(`Screenshot also saved to: ${filename}`);
+			// console.log(`Screenshot also saved to: ${filename}`);
 		} catch (error) {
 			console.error('Failed to take screenshot:', error);
 		}
@@ -380,45 +380,54 @@ Consider the price when making your selection. Return only the product titles, o
 
 	async run(userPrompt: string): Promise<void> {
 		try {
-			console.log('Initializing agent...');
+			// console.log('Initializing agent...');
 			await this.initialize();
 
-			console.log('Generating search query...');
+			// console.log('Generating search query...');
 			const searchQuery = await this.generateSearchQuery(userPrompt);
-			console.log(`Search query: ${searchQuery}`);
+			// console.log(`Search query: ${searchQuery}`);
 
-			console.log('Navigating to shop.app...');
+			// console.log('Navigating to shop.app...');
 			await this.navigateToShopApp();
 
-			console.log('Performing search...');
+			// console.log('Performing search...');
 			await this.performSearch(searchQuery);
 
-			console.log('Extracting products...');
+			// console.log('Extracting products...');
 			const products = await this.extractProducts();
-			console.log(`Found ${products.length} products`);
+			// console.log(`Found ${products.length} products`);
 
 			if (products.length === 0) {
-				console.log('No products found');
+				// console.log('No products found');
 				return;
 			}
 
-			console.log('Selecting best products...');
-			console.log(products.map(p => `${p.title} - ${p.price}`));
+			// console.log('Selecting best products...');
+			// console.log(products.map(p => `${p.title} - ${p.price}`));
 			const selectedProducts = await this.selectBestProducts(
 				products,
 				userPrompt,
 			);
-			console.log(`Selected ${selectedProducts.length} products`);
+			// console.log(`Selected ${selectedProducts.length} products`);
 
 			if (selectedProducts.length > 0) {
-				await this.callback.sendOptions(selectedProducts.map(sp => sp.title))
-				console.log('Clicking on first product...');
-				console.log(selectedProducts[0]);
-				// @ts-ignore
-				await this.clickProduct(selectedProducts[0]);
+				const selectedOption = await this.callback.sendOptions(selectedProducts.map(sp => sp.title))
+				console.log(`User selected: ${selectedOption}`);
+				
+				// Find the selected product by title
+				const selectedProduct = selectedProducts.find(p => p.title === selectedOption);
+				if (selectedProduct) {
+					console.log('Clicking on selected product...');
+					await this.clickProduct(selectedProduct);
 
-				console.log('Clicking buy now...');
-				await this.clickBuyNow();
+					console.log('Clicking buy now...');
+					await this.clickBuyNow();
+				} else {
+					console.log('Selected product not found, using first product');
+					// @ts-ignore
+					await this.clickProduct(selectedProducts[0]);
+					await this.clickBuyNow();
+				}
 			}
 		} catch (error) {
 			console.error('Error in agent execution:', error);
@@ -436,7 +445,7 @@ export default ShopAppAgent;
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const userPrompt = process.argv[2];
 	if (!userPrompt) {
-		console.log('Usage: npm run dev "I want a plain white t shirt for a man"');
+		// console.log('Usage: npm run dev "I want a plain white t shirt for a man"');
 		process.exit(1);
 	}
 
