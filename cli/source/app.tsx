@@ -55,15 +55,15 @@ export default function App() {
 
   // @ts-ignore
   const handleImageResponse = (imageBase64: string) => {
-    // setMessages(prev => [
-    //   ...prev,
-    //   {
-    //     id: Date.now().toString(),
-    //     imageBase64Buffer: Buffer.from(imageBase64, 'base64'),
-    //     isUser: false,
-    //     timestamp: new Date(),
-    //   },
-    // ])
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        imageBase64Buffer: Buffer.from(imageBase64, 'base64'),
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ])
     setIsProcessing(false)
     setIsTakingInput(true)
   }

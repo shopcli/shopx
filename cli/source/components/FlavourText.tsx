@@ -1,5 +1,4 @@
 import { Box, Text } from 'ink'
-import Spinner from 'ink-spinner'
 import React, { useEffect, useState } from 'react'
 import { loadingFlavourTexts } from '../config/flavour.js'
 
@@ -26,7 +25,7 @@ export default function FlavourText({ color = 'green' }: Props) {
 
   return (
     <Box flexDirection="row" alignItems="center" width={80}>
-      <Spinner type="dots9" />
+      {/* <Spinner type="dots9" /> */}
       <Text color={color}> {paddedText}</Text>
     </Box>
   )

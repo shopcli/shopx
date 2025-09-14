@@ -32,7 +32,8 @@
 		"ink-use-stdout-dimensions": "^1.0.5",
 		"meow": "^11.0.0",
 		"playwright": "^1.40.0",
-		"react": "^18.2.0"
+		"react": "^18.2.0",
+		"terminal-image": "^4.0.0"
 	},
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
