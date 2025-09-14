@@ -37,4 +37,18 @@ claude code... but for shopping!
    node ./dist/cli/source/cli.js
    ```
 
-That's it! You can now shop in the confines of your humble terminal ╰( ͡° ͜ʖ ͡° )つ ──☆\*:・ﾟ
+### Alternative: Global Installation
+
+You can also install the CLI globally for easier access:
+
+1. Install globally:
+
+   ```bash
+   npm install -g .
+   ```
+
+if you get permission errors, you can try the very sus option of using sudo:
+
+```bash
+sudo npm install -g .
+```
