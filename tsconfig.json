@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"outDir": "dist"
 	},
-	"include": ["source"],
+	"include": ["cli/source"],
 	"ts-node": {
 		"esm": true
 	}

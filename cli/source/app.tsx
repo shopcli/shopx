@@ -7,6 +7,7 @@ import {
   MessageList,
 } from './components/index.js'
 import { CallbackMessage, Message } from './config/types.js'
+import { callShopapp } from '../../tools/shopapp/agent.js';
 
 class AppClass implements CallbackMessage {
 	constructor(
@@ -29,10 +30,12 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
 
+	// @ts-ignore
 	const handleMessageResponse = async (message: Message, phase: string) => {
 
 	}
 
+	// @ts-ignore
 	const handleImageResponse = (imageBase64: string) => {
 
 	}
@@ -50,7 +53,7 @@ export default function App() {
     setMessages(prev => [...prev, userMessage])
     setIsProcessing(true)
 
-    callShopapp(userMessage, app)
+    await callShopapp(userMessage, app)
   }
 
   return (

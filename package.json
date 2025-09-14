@@ -11,7 +11,8 @@
 		"build": "tsc",
 		"dev": "tsc --watch",
 		"test": "prettier --check . && xo && ava",
-        "dev-shop": "ts-node tools/shopapp/agent.ts"
+        "dev-shop": "ts-node tools/shopapp/agent.ts",
+      "dev-cli": "tsc --watch --project ./cli"
 	},
 	"files": [
 		"dist"
