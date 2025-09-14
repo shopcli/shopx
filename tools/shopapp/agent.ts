@@ -2,8 +2,14 @@ import axios from 'axios';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-import {Browser, chromium, Page} from 'playwright';
+import {chromium} from 'playwright';
+import type {Browser, Page} from 'playwright';
 import type {CallbackMessage, Message} from '../../cli/source/config/types.js';
+import {fileURLToPath} from 'node:url';
+import {dirname} from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -347,9 +353,6 @@ Consider the price when making your selection. Return only the product titles, o
 			console.log('Screenshot captured (base64):');
 			console.log(`data:image/png;base64,${base64Image}`);
 
-			// Also save to file for reference
-			const fs = require('fs');
-			const path = require('path');
 			const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 			const filename = `screenshot-${timestamp}.png`;
 			const filepath = path.join(__dirname, filename);
@@ -414,7 +417,7 @@ Consider the price when making your selection. Return only the product titles, o
 export default ShopAppAgent;
 
 // CLI usage
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const userPrompt = process.argv[2];
 	if (!userPrompt) {
 		console.log('Usage: npm run dev "I want a plain white t shirt for a man"');
