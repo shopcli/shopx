@@ -36,6 +36,7 @@ class UnifiedAgent {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private openRouteApiKey: string;
+  private lastSearchQuery: string = '';
 
   constructor() {
     this.openRouteApiKey = process.env.OPENROUTER_API_KEY || '';
@@ -112,30 +113,77 @@ class UnifiedAgent {
 
   async generateSearchQuery(userPrompt: string, platform: 'shop' | 'food'): Promise<string> {
     if (platform === 'food') {
-      // Simple keyword extraction for common food types
+      // Enhanced keyword extraction for food types
       const lowerPrompt = userPrompt.toLowerCase();
       
-      if (lowerPrompt.includes('pizza')) {
-        return 'pizza';
-      } else if (lowerPrompt.includes('chinese') || lowerPrompt.includes('china')) {
-        return 'chinese food';
-      } else if (lowerPrompt.includes('burger')) {
-        return 'burger';
-      } else if (lowerPrompt.includes('sushi') || lowerPrompt.includes('japanese')) {
-        return 'sushi';
-      } else if (lowerPrompt.includes('thai')) {
-        return 'thai food';
-      } else if (lowerPrompt.includes('indian')) {
-        return 'indian food';
-      } else if (lowerPrompt.includes('korean')) {
-        return 'korean food';
-      } else if (lowerPrompt.includes('mexican')) {
-        return 'mexican food';
-      } else if (lowerPrompt.includes('italian')) {
-        return 'italian food';
-      } else {
-        return userPrompt;
+      // Extract the main food item from the prompt
+      const foodKeywords = [
+        'pizza', 'burger', 'sushi', 'boba', 'bubble tea', 'tea', 'coffee',
+        'chinese', 'china', 'thai', 'indian', 'korean', 'mexican', 'italian',
+        'sandwich', 'salad', 'pasta', 'noodles', 'ramen', 'pho', 'tacos',
+        'wings', 'chicken', 'beef', 'fish', 'seafood', 'vegetarian', 'vegan',
+        'dessert', 'cake', 'ice cream', 'donuts', 'cookies', 'smoothie',
+        'juice', 'drink', 'beverage', 'breakfast', 'lunch', 'dinner'
+      ];
+      
+      // Find the first matching food keyword
+      for (const keyword of foodKeywords) {
+        if (lowerPrompt.includes(keyword)) {
+          // Return the keyword or a more specific search term
+          if (keyword === 'boba' || keyword === 'bubble tea') {
+            return 'bubble tea';
+          } else if (keyword === 'chinese' || keyword === 'china') {
+            return 'chinese food';
+          } else if (keyword === 'thai') {
+            return 'thai food';
+          } else if (keyword === 'indian') {
+            return 'indian food';
+          } else if (keyword === 'korean') {
+            return 'korean food';
+          } else if (keyword === 'mexican') {
+            return 'mexican food';
+          } else if (keyword === 'italian') {
+            return 'italian food';
+          } else if (keyword === 'japanese') {
+            return 'japanese food';
+          } else {
+            return keyword;
+          }
+        }
       }
+      
+      // If no specific keyword found, extract the main food term
+      // Remove common words and return the cleaned prompt
+      const commonWords = ['i', 'want', 'to', 'order', 'get', 'have', 'some', 'a', 'an', 'the', 'food', 'eat', 'drink', 'for', 'dinner', 'lunch', 'breakfast', 'meal', 'today', 'now', 'please'];
+      const words = lowerPrompt.split(' ').filter(word => 
+        word.length > 2 && !commonWords.includes(word)
+      );
+      
+      // If we found words, return the first one (most likely the food item)
+      if (words.length > 0) {
+        return words[0];
+      }
+      
+      // If no words found, try to extract from the original prompt
+      // Look for patterns like "I want X" or "I need X" or "X for dinner"
+      const patterns = [
+        /i\s+want\s+(\w+)/i,
+        /i\s+need\s+(\w+)/i,
+        /i\s+would\s+like\s+(\w+)/i,
+        /(\w+)\s+for\s+(dinner|lunch|breakfast)/i,
+        /(\w+)\s+please/i,
+        /(\w+)\s+now/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = userPrompt.match(pattern);
+        if (match && match[1]) {
+          return match[1].toLowerCase();
+        }
+      }
+      
+      // Final fallback - return the original prompt
+      return userPrompt;
     } else {
       // Shopping search query
       const lowerPrompt = userPrompt.toLowerCase();
@@ -353,6 +401,7 @@ class UnifiedAgent {
 
     // Generate search query
     const searchQuery = await this.generateSearchQuery(userPrompt, 'food');
+    this.lastSearchQuery = searchQuery; // Store for later use in restaurant menu search
     console.log(`Search query: ${searchQuery}`);
 
     // Force close popup before search
@@ -373,10 +422,12 @@ class UnifiedAgent {
     console.log(`Found ${restaurants.length} restaurants`);
 
     if (restaurants.length > 0) {
-      const selectedRestaurant = restaurants[0];
-      console.log(`Selected first restaurant: ${selectedRestaurant.name}`);
+      // Randomly select a restaurant instead of always picking the first one
+      const randomIndex = Math.floor(Math.random() * restaurants.length);
+      const selectedRestaurant = restaurants[randomIndex];
+      console.log(`Randomly selected restaurant ${randomIndex + 1}/${restaurants.length}: ${selectedRestaurant.name}`);
       await this.clickRestaurant(selectedRestaurant);
-      await this.selectPizzaAndToppings();
+      await this.selectFoodItem();
     }
   }
 
@@ -433,6 +484,13 @@ class UnifiedAgent {
     // Screenshot removed for speed
 
     const searchSelectors = [
+      // Try generic selectors first since we know input exists
+      'input',
+      'input[type="text"]',
+      'input[type="null"]',
+      'input[class="null"]',
+      'input[id="null"]',
+      // Then try more specific ones
       'input[placeholder*="Search"]',
       'input[placeholder*="search"]',
       'input[placeholder*="Search restaurants"]',
@@ -445,10 +503,7 @@ class UnifiedAgent {
       'input[id*="search"]',
       'input[class*="Search"]',
       'input[class*="search-input"]',
-      'input[class*="searchInput"]',
-      // More generic selectors
-      'input',
-      'input[type="text"]'
+      'input[class*="searchInput"]'
     ];
 
     console.log('Looking for search input...');
@@ -823,10 +878,76 @@ class UnifiedAgent {
     }
   }
 
-  async selectPizzaAndToppings(): Promise<void> {
+  async searchWithinRestaurant(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
-    console.log('Looking for pizza items on restaurant page...');
+    console.log('Searching within restaurant menu for specific food item...');
+    
+    // Get the original search query from the user prompt
+    const currentUrl = this.page.url();
+    if (!currentUrl.includes('/store/') && !currentUrl.includes('/restaurant/')) {
+      console.log('Not on restaurant page, skipping menu search');
+      return;
+    }
+
+    // Look for search input within the restaurant page
+    const menuSearchSelectors = [
+      'input[placeholder*="Search"]',
+      'input[placeholder*="search"]',
+      'input[placeholder*="menu"]',
+      'input[placeholder*="Menu"]',
+      'input[placeholder*="Find"]',
+      'input[placeholder*="find"]',
+      'input[name="search"]',
+      'input[type="search"]',
+      'input[class*="search"]',
+      'input[id*="search"]'
+    ];
+
+    let menuSearchInput = null;
+    for (const selector of menuSearchSelectors) {
+      try {
+        menuSearchInput = await this.page.waitForSelector(selector, { timeout: 1000 });
+        if (menuSearchInput) {
+          console.log(`Found menu search input: ${selector}`);
+          break;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (menuSearchInput) {
+      try {
+        // Get the original search query from the user prompt
+        // For now, we'll use a simple approach - look for the food type in the URL or use a default
+        const searchQuery = this.getLastSearchQuery() || 'burger';
+        console.log(`Searching within menu for: ${searchQuery}`);
+        
+        await menuSearchInput.click();
+        await menuSearchInput.fill(searchQuery);
+        await menuSearchInput.press('Enter');
+        await this.page.waitForTimeout(500); // Wait for menu search results
+        console.log('Menu search completed');
+      } catch (e) {
+        console.log('Could not search within menu:', (e as Error).message);
+      }
+    } else {
+      console.log('No menu search input found, proceeding with full menu');
+    }
+  }
+
+  private getLastSearchQuery(): string | null {
+    return this.lastSearchQuery || null;
+  }
+
+  async selectFoodItem(): Promise<void> {
+    if (!this.page) throw new Error('Page not initialized');
+
+    console.log('Looking for food items on restaurant page...');
+    
+    // First, try to search within the restaurant's menu for the specific food item
+    await this.searchWithinRestaurant();
 
     // First, close any modals that might be blocking
     await this.closeModals();
@@ -847,9 +968,12 @@ class UnifiedAgent {
         '.item',
         '[class*="menu"]',
         '[class*="food"]',
-        '[class*="pizza"]',
-        'div:has-text("pizza")',
-        'div:has-text("Pizza")'
+        '[class*="dish"]',
+        '[class*="meal"]',
+        '[class*="product"]',
+        'div[class*="item"]',
+        'a[class*="item"]',
+        'button[class*="item"]'
       ];
       
       let menuItems: any[] = [];
@@ -872,7 +996,14 @@ class UnifiedAgent {
         menuItems = clickableItems.filter(async (item) => {
           try {
             const text = await item.textContent();
-            return text && (text.toLowerCase().includes('pizza') || text.toLowerCase().includes('food') || text.toLowerCase().includes('$'));
+            return text && (
+              text.toLowerCase().includes('food') || 
+              text.toLowerCase().includes('$') ||
+              text.toLowerCase().includes('menu') ||
+              text.toLowerCase().includes('order') ||
+              text.toLowerCase().includes('add') ||
+              text.match(/\$\d+/) // Contains price
+            );
           } catch (e) {
             return false;
           }
@@ -882,8 +1013,8 @@ class UnifiedAgent {
       if (menuItems.length > 0) {
         console.log(`Found ${menuItems.length} potential menu items`);
         
-        // Click on the first menu item
-        console.log('Clicking on first menu item...');
+        // Always select the first menu item
+        console.log(`Selecting first menu item from ${menuItems.length} available items...`);
         try {
           await menuItems[0].scrollIntoViewIfNeeded();
           // No wait time
@@ -904,7 +1035,7 @@ class UnifiedAgent {
         }
 
         // Add random toppings
-        await this.addRandomToppings();
+        await this.addRandomOptions();
 
         // Add to cart
         await this.addToCart();
@@ -917,56 +1048,59 @@ class UnifiedAgent {
 
     // Fallback: if we're not on restaurant page or no menu items found
     console.log('No menu items found on current page');
-    throw new Error('No pizza or menu items found on restaurant page');
+    throw new Error('No food items found on restaurant page');
   }
 
-  async addRandomToppings(): Promise<void> {
+  async addRandomOptions(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
-    console.log('Adding random toppings...');
+    console.log('Adding random options/customizations...');
 
-    // Common pizza toppings
-    const toppings = [
-      'Pepperoni', 'Mushrooms', 'Onions', 'Green Peppers', 'Black Olives',
-      'Sausage', 'Bacon', 'Extra Cheese', 'Pineapple', 'Jalapeños',
-      'Tomatoes', 'Spinach', 'Chicken', 'Ham', 'Anchovies'
+    // Common food customizations and add-ons
+    const options = [
+      'Extra', 'Add', 'With', 'No', 'Extra Cheese', 'Extra Sauce', 'Extra Spice',
+      'Large', 'Medium', 'Small', 'Regular', 'Spicy', 'Mild', 'Hot',
+      'Extra Toppings', 'Add Onions', 'Add Tomatoes', 'Add Lettuce',
+      'Extra Meat', 'Extra Veggies', 'Extra Rice', 'Extra Noodles'
     ];
 
-    // Look for topping options
-    const toppingSelectors = [
+    // Look for customization options
+    const optionSelectors = [
       'input[type="checkbox"]',
       'input[type="radio"]',
-      'button[class*="topping"]',
+      'button[class*="option"]',
       'button[class*="add"]',
-      '[class*="topping"]',
+      'button[class*="customize"]',
       '[class*="option"]',
-      'label[class*="topping"]',
-      'div[class*="topping"]'
+      '[class*="addon"]',
+      '[class*="customize"]',
+      'label[class*="option"]',
+      'div[class*="option"]'
     ];
 
-    let selectedToppings = 0;
-    const maxToppings = Math.floor(Math.random() * 3) + 1; // 1-3 random toppings
+    let selectedOptions = 0;
+    const maxOptions = Math.floor(Math.random() * 3) + 1; // 1-3 random options
 
-    for (const selector of toppingSelectors) {
+    for (const selector of optionSelectors) {
       try {
         const elements = await this.page.$$(selector);
         if (elements.length > 0) {
-          console.log(`Found ${elements.length} potential topping elements with selector: ${selector}`);
+          console.log(`Found ${elements.length} potential option elements with selector: ${selector}`);
           
-          // Randomly select some toppings
+          // Randomly select some options
           const shuffled = elements.sort(() => 0.5 - Math.random());
-          const toSelect = shuffled.slice(0, Math.min(maxToppings, elements.length));
+          const toSelect = shuffled.slice(0, Math.min(maxOptions, elements.length));
           
           for (const element of toSelect) {
             try {
               const text = await element.textContent();
-              if (text && toppings.some(topping => text.toLowerCase().includes(topping.toLowerCase()))) {
+              if (text && options.some(option => text.toLowerCase().includes(option.toLowerCase()))) {
                 await element.click();
                 // No wait time
-                selectedToppings++;
-                console.log(`Added topping: ${text.trim()}`);
+                selectedOptions++;
+                console.log(`Added option: ${text.trim()}`);
                 
-                if (selectedToppings >= maxToppings) break;
+                if (selectedOptions >= maxOptions) break;
               }
             } catch (e) {
               // Skip if can't click
@@ -974,14 +1108,14 @@ class UnifiedAgent {
             }
           }
           
-          if (selectedToppings > 0) break;
+          if (selectedOptions > 0) break;
         }
       } catch (e) {
         continue;
       }
     }
 
-    console.log(`Added ${selectedToppings} random toppings`);
+    console.log(`Added ${selectedOptions} random options`);
   }
 
   async addToCart(): Promise<void> {
@@ -1057,67 +1191,173 @@ class UnifiedAgent {
   async proceedToCheckout(): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
 
-    console.log('Looking for checkout button on the right side...');
+    const currentUrl = this.page.url();
+    console.log('Current URL for checkout check:', currentUrl);
+
+    console.log('Looking for checkout button...');
     
     // Close any modals first
     await this.closeModals();
     
-    // Look for checkout/cart buttons that are typically on the right side
-    const checkoutSelectors = [
-      'button:has-text("Check Out")',  // Most common on Fantuan
+    // Wait a moment for any dynamic content to load
+    await this.page.waitForTimeout(500);
+    
+    // Method 1: Look for specific checkout button text
+    const textSelectors = [
+      'button:has-text("Check Out")',
       'button:has-text("Checkout")',
       'button:has-text("View Cart")',
-      'button:has-text("Cart")',
       'button:has-text("Go to Cart")',
       'button:has-text("Place Order")',
       'button:has-text("Order Now")',
       'button:has-text("Proceed to Checkout")',
       'button:has-text("Continue to Checkout")',
-      // Look for buttons in the right sidebar/cart area
-      '[class*="checkout"]',
-      '[class*="cart"]',
-      '[class*="sidebar"] button',
-      '[class*="right"] button',
-      '[class*="floating"] button',
-      '[class*="fixed"] button',
-      '[data-testid*="checkout"]',
-      '[data-testid*="cart"]',
+      'a:has-text("Check Out")',
       'a:has-text("Checkout")',
-      'a:has-text("Cart")',
-      'a[href*="checkout"]',
-      'a[href*="cart"]'
+      'a:has-text("View Cart")',
+      'a:has-text("Go to Cart")'
     ];
+    
+    // Method 2: Look for buttons in specific areas
+    const areaSelectors = [
+      'div[class*="cart"] button',
+      'div[class*="sidebar"] button',
+      'div[class*="right"] button',
+      'div[class*="floating"] button',
+      'div[class*="fixed"] button',
+      'div[class*="bottom"] button',
+      'div[class*="footer"] button'
+    ];
+    
+    // Method 3: Look for buttons with checkout-related classes
+    const classSelectors = [
+      '[class*="checkout"]',
+      '[class*="order"]',
+      '[class*="proceed"]',
+      '[class*="continue"]',
+      '[class*="cart"]',
+      '[class*="btn"]',
+      '[class*="button"]'
+    ];
+    
+    // Method 4: Look for links to checkout pages
+    const linkSelectors = [
+      'a[href*="checkout"]',
+      'a[href*="cart"]',
+      'a[href*="order"]',
+      'a[href*="payment"]'
+    ];
+    
+    const allSelectors = [...textSelectors, ...areaSelectors, ...classSelectors, ...linkSelectors];
 
-    for (const selector of checkoutSelectors) {
+    // Try each method systematically
+    console.log('Method 1: Looking for buttons with specific text...');
+    for (const selector of textSelectors) {
       try {
-        console.log(`Trying checkout selector: ${selector}`);
-        const checkoutButton = await this.page.waitForSelector(selector, { timeout: 50 }); // Slightly longer timeout
+        console.log(`Trying text selector: ${selector}`);
+        const checkoutButton = await this.page.waitForSelector(selector, { timeout: 10 });
         if (checkoutButton) {
-          console.log(`✅ Found checkout button with selector: ${selector}`);
+          console.log(`✅ Found checkout button with text selector: ${selector}`);
           await checkoutButton.click();
-          await this.page.waitForTimeout(100); // Brief wait for navigation
           console.log('Successfully clicked checkout button!');
-          
           console.log('🎉 Successfully navigated to checkout page!');
-          console.log('💳 You can now complete your order in the browser');
           return;
         }
       } catch (e) {
-        console.log(`❌ Checkout selector ${selector} not found`);
+        continue;
+      }
+    }
+    
+    console.log('Method 2: Looking for buttons in specific areas...');
+    for (const selector of areaSelectors) {
+      try {
+        console.log(`Trying area selector: ${selector}`);
+        const checkoutButton = await this.page.waitForSelector(selector, { timeout: 10 });
+        if (checkoutButton) {
+          console.log(`✅ Found checkout button with area selector: ${selector}`);
+          await checkoutButton.click();
+          console.log('Successfully clicked checkout button!');
+          console.log('🎉 Successfully navigated to checkout page!');
+          return;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    console.log('Method 3: Looking for buttons with checkout classes...');
+    for (const selector of classSelectors) {
+      try {
+        console.log(`Trying class selector: ${selector}`);
+        const checkoutButton = await this.page.waitForSelector(selector, { timeout: 10 });
+        if (checkoutButton) {
+          console.log(`✅ Found checkout button with class selector: ${selector}`);
+          await checkoutButton.click();
+          console.log('Successfully clicked checkout button!');
+          console.log('🎉 Successfully navigated to checkout page!');
+          return;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    console.log('Method 4: Looking for checkout links...');
+    for (const selector of linkSelectors) {
+      try {
+        console.log(`Trying link selector: ${selector}`);
+        const checkoutButton = await this.page.waitForSelector(selector, { timeout: 10 });
+        if (checkoutButton) {
+          console.log(`✅ Found checkout link with selector: ${selector}`);
+          await checkoutButton.click();
+          console.log('Successfully clicked checkout link!');
+          console.log('🎉 Successfully navigated to checkout page!');
+          return;
+        }
+      } catch (e) {
         continue;
       }
     }
 
     // Fallback: look for any button that might lead to checkout (prioritize right side)
     console.log('No specific checkout button found, looking for any relevant buttons...');
-    const allButtons = await this.page.$$('button');
+    const allButtons = await this.page.$$('button, a, div[role="button"], span[role="button"]');
+    console.log(`Found ${allButtons.length} total clickable elements`);
+    
+    // First, let's see what buttons are available
+    console.log('Available buttons on page:');
+    for (let i = 0; i < Math.min(allButtons.length, 10); i++) {
+      try {
+        const button = allButtons[i];
+        const text = await button.textContent();
+        const tagName = await button.evaluate(el => el.tagName);
+        const className = await button.getAttribute('class');
+        console.log(`Button ${i}: "${text?.trim()}" (${tagName}, class="${className}")`);
+      } catch (e) {
+        console.log(`Button ${i}: Could not get details`);
+      }
+    }
+    
+    // Look for checkout-related buttons
     for (const button of allButtons) {
       try {
         const text = await button.textContent();
-        if (text && (text.toLowerCase().includes('checkout') || text.toLowerCase().includes('cart') || text.toLowerCase().includes('order'))) {
-          console.log(`Trying potential checkout button: ${text.trim()}`);
+        if (text && (
+          text.toLowerCase().includes('check out') || 
+          text.toLowerCase().includes('checkout') || 
+          text.toLowerCase().includes('view cart') ||
+          text.toLowerCase().includes('go to cart') ||
+          text.toLowerCase().includes('place order') ||
+          text.toLowerCase().includes('order now') ||
+          text.toLowerCase().includes('proceed') ||
+          text.toLowerCase().includes('continue') ||
+          text.toLowerCase().includes('complete order') ||
+          text.toLowerCase().includes('cart') ||
+          text.toLowerCase().includes('order')
+        )) {
+          console.log(`Trying potential checkout button: "${text.trim()}"`);
           await button.click();
-          await this.page.waitForTimeout(100); // Brief wait for navigation
+          // No wait time - immediate return
           console.log('✅ Clicked potential checkout button!');
           return;
         }
