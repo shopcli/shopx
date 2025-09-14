@@ -1,8 +1,10 @@
 # shopx
 
-claude code... but for shopping!?
+https://img.shields.io/badge/hack_the_north-2025-purple
 
-![shopx](./shopx.png)
+![shopx](.github/images/image.png)
+
+claude code... but for shopping!
 
 ## Setup
 
