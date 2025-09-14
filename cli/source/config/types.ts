@@ -7,6 +7,7 @@ export interface Message {
 }
 
 export interface CallbackMessage {
-	sendMessage(message: Message, phase: string): Promise<void>;
+	sendMessage(message: string): Promise<void>;
 	sendImage(imageBase64: string): void;
+	sendOptions(options: string[]): Promise<void>;
 }

@@ -34,8 +34,10 @@ class ShopAppAgent {
 	private browser: Browser | null = null;
 	private page: Page | null = null;
 	private openRouteApiKey: string;
+	private callback: CallbackMessage;
 
-	constructor() {
+	constructor(callback: CallbackMessage) {
+		this.callback = callback;
 		// @ts-ignore
 		this.openRouteApiKey = process.env.OPENROUTER_API_KEY || '';
 		if (!this.openRouteApiKey) {
@@ -146,9 +148,11 @@ class ShopAppAgent {
 
 		// Page should already be on shop.app from loadCookies
 		console.log('Already on shop.app, ready to search');
+		await this.callback.sendMessage("Navigating to Shopapp")
 	}
 
 	async performSearch(searchQuery: string): Promise<void> {
+		await this.callback.sendMessage(`Searching Shopapp with ${searchQuery}`);
 		if (!this.page) throw new Error('Page not initialized');
 
 		const searchSelectors = [
@@ -182,6 +186,7 @@ class ShopAppAgent {
 	}
 
 	async extractProducts(): Promise<Product[]> {
+		await this.callback.sendMessage("Gathering items")
 		if (!this.page) throw new Error('Page not initialized');
 
 		const products: Product[] = [];
@@ -232,6 +237,7 @@ class ShopAppAgent {
 		products: Product[],
 		userPrompt: string,
 	): Promise<Product[]> {
+		await this.callback.sendMessage(`Picking best items from ${products.length} products`);
 		if (products.length === 0) return [];
 
 		const productList = products
@@ -324,6 +330,7 @@ Consider the price when making your selection. Return only the product titles, o
 	}
 
 	async clickBuyNow(): Promise<void> {
+		await this.callback.sendMessage("Heading to checkout")
 		if (!this.page) throw new Error('Page not initialized');
 
 		const buyNowButton = await this.page.waitForSelector(
@@ -353,15 +360,18 @@ Consider the price when making your selection. Return only the product titles, o
 				fullPage: true,
 			});
 
+			await this.callback.sendMessage("Checkout reached")
 			const base64Image = screenshot.toString('base64');
+			this.callback.sendImage(base64Image);
 			console.log('Screenshot captured (base64):');
 			console.log(`data:image/png;base64,${base64Image}`);
 
 			const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 			const filename = `screenshot-${timestamp}.png`;
+			// @ts-ignore
 			const filepath = path.join(__dirname, filename);
 
-			fs.writeFileSync(filepath, screenshot);
+			// fs.writeFileSync(filepath, screenshot);
 			console.log(`Screenshot also saved to: ${filename}`);
 		} catch (error) {
 			console.error('Failed to take screenshot:', error);
@@ -401,6 +411,7 @@ Consider the price when making your selection. Return only the product titles, o
 			console.log(`Selected ${selectedProducts.length} products`);
 
 			if (selectedProducts.length > 0) {
+				await this.callback.sendOptions(selectedProducts.map(sp => sp.title))
 				console.log('Clicking on first product...');
 				console.log(selectedProducts[0]);
 				// @ts-ignore
@@ -429,8 +440,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		process.exit(1);
 	}
 
-	const agent = new ShopAppAgent();
-	agent.run(userPrompt).catch(console.error);
+	// const agent = new ShopAppAgent();
+	// agent.run(userPrompt).catch(console.error);
 }
 
 export async function callShopapp(
@@ -438,6 +449,6 @@ export async function callShopapp(
 	// @ts-ignore
 	app: CallbackMessage
 ) {
-	const agent = new ShopAppAgent();
+	const agent = new ShopAppAgent(app);
 	return agent.run(userMessage.content)
 }

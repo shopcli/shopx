@@ -11,18 +11,23 @@ import { callShopapp } from '../../tools/shopapp/agent.js';
 
 class AppClass implements CallbackMessage {
 	constructor(
-		public notify: (arg0: Message, arg1: string) => void,
+		public notify: (arg0: string) => Promise<void>,
 		public notifyImage: (arg0: string) => void,
+		public notifyOptions: (arg0: string[]) => Promise<void>,
 	) {
 		this.notify = notify;
 		this.notifyImage = notifyImage;
 	}
-	async sendMessage(message: Message, phase: string): Promise<void> {
-		this.notify(message, phase);
+	async sendMessage(message: string): Promise<void> {
+		await this.notify(message);
 	}
 
 	sendImage(imageBase64: string) {
 		this.notifyImage(imageBase64);
+	}
+
+	async sendOptions(options: string[]): Promise<void> {
+		await this.notifyOptions(options);
 	}
 }
 
@@ -31,16 +36,32 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false)
 
 	// @ts-ignore
-	const handleMessageResponse = async (message: Message, phase: string) => {
-
+	const handleMessageResponse = async (message: string) => {
+		setMessages(prev => [...prev, { id: Date.now().toString(),
+			content: message,
+			isUser: false,
+			timestamp: new Date(),}])
 	}
 
 	// @ts-ignore
 	const handleImageResponse = (imageBase64: string) => {
-
+		setMessages(prev => [...prev, { id: Date.now().toString(),
+			content: "yippee",
+			isUser: false,
+			timestamp: new Date(),}]);
+		setIsProcessing(false)
 	}
 
-	const app = new AppClass(handleMessageResponse, handleImageResponse)
+	// @ts-ignore
+	const handleOptionsResponse = async (options: string[]) => {
+		setMessages(prev => [...prev, { id: Date.now().toString(),
+			content: JSON.stringify(options),
+			isUser: false,
+			timestamp: new Date(),}]);
+		return; // FIXME: actually prompt for input
+	}
+
+	const app = new AppClass(handleMessageResponse, handleImageResponse, handleOptionsResponse)
 
   const handleMessageSubmit = async (content: string) => {
     const userMessage: Message = {
